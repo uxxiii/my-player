@@ -7,22 +7,12 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
 
-const allowedOrigins = new Set([
-  FRONTEND_URL,
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5174',
-  'https://my-player-one.vercel.app',
-  'https://my-player-one.vercel.app/', // with trailing slash
-]);
-
-// CORS configured to allow all origins for live deployment
+// CORS configured to allow any origin for the audio proxy and API routes.
 app.use(
   cors({
-    origin: '*',
+    origin: true,
     credentials: false,
   })
 );
@@ -148,6 +138,7 @@ const scoreYouTubeMatch = ({ item, title, artist }) => {
 const resolveYouTubeTrack = async ({ title, artist }) => {
   const ytKey = process.env.YOUTUBE_API_KEY;
   if (!ytKey) {
+    console.warn('⚠️ YOUTUBE_API_KEY is not set in backend environment. YouTube resolution will fail.');
     return null;
   }
 
@@ -322,7 +313,7 @@ app.get('/api/audio', async (req, res) => {
     const contentType = audioResponse.headers.get('content-type') || 'audio/mpeg';
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Access-Control-Allow-Origin', FRONTEND_URL);
+    res.setHeader('Access-Control-Allow-Origin', '*');
 
     const buffer = await audioResponse.arrayBuffer();
     res.end(Buffer.from(buffer));
