@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Navigation } from './components/Navigation';
@@ -13,7 +13,7 @@ import { Login } from './pages/Login';
 import { Settings } from './pages/Settings';
 import { LikedSongs } from './pages/LikedSongs';
 import { NowPlayingPanel } from './components/NowPlayingPanel';
-import { MusicProvider } from './context/MusicContext';
+import { MusicProvider, useMusic } from './context/MusicContext';
 
 const LEFT_PANEL_MIN = 232;
 const LEFT_PANEL_MAX = 420;
@@ -38,12 +38,23 @@ const ResizeHandle: React.FC<{ onPointerDown: () => void; className?: string }> 
 );
 
 function AppContent() {
+  const { user } = useMusic();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [leftPanelWidth, setLeftPanelWidth] = useState(280);
   const [rightPanelWidth, setRightPanelWidth] = useState(320);
   const [draggingPanel, setDraggingPanel] = useState<'left' | 'right' | null>(null);
+
+  // If not logged in, show only the login page
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
 
   useEffect(() => {
     if (!draggingPanel) return;
@@ -124,7 +135,7 @@ function AppContent() {
             <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
+                <Route path="/login" element={<Navigate to="/" replace />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/playlist/:id" element={<Playlist />} />
                 <Route path="/settings" element={<Settings />} />
