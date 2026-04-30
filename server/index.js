@@ -251,7 +251,7 @@ const mapSpotifyTrack = (track, baseUrl = '') => {
 };
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, deployedAt: new Date().toISOString() });
 });
 
 app.get('/api/spotify/auth-url', (req, res) => {
