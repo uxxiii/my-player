@@ -18,9 +18,11 @@ const allowedOrigins = new Set([
   'https://my-player-one.vercel.app',
 ]);
 
+// CORS configured to allow all origins for live deployment
 app.use(
   cors({
-    origin: true, // Allow all origins temporarily for testing
+    origin: '*',
+    credentials: false,
   })
 );
 app.use(express.json({ limit: '2mb' }));
