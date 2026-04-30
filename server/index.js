@@ -147,7 +147,7 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
 
   console.log(`📺 Resolving YouTube track: "${title}" by "${artist}"`);
   const queries = buildYouTubeQueries({ title, artist });
-  console.log(`📺 Built ${queries.length} search queries`);
+  console.log(`📺 Built ${queries.length} search queries:`, queries);
 
   const fetchYouTubeResults = async (query, withCategory = true) => {
     let ytUrl =
@@ -163,11 +163,15 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
     if (!response.ok) {
       const text = await response.text();
       console.error(`❌ YouTube search failed for "${query}": ${response.status} ${text}`);
-      throw new Error(`YouTube search failed: ${text}`);
+      throw new Error(`YouTube search failed: ${response.status} ${text}`);
     }
 
     const data = await response.json();
     const items = Array.isArray(data.items) ? data.items : [];
+    const errorMessage = data.error?.message || null;
+    if (errorMessage) {
+      console.error(`❌ YouTube API responded with error for "${query}": ${errorMessage}`);
+    }
     console.log(`  ✅ Got ${items.length} results for "${query}"`);
     return items;
   };
@@ -374,10 +378,12 @@ app.post('/api/resolve-youtube-track', async (req, res) => {
     const track = await resolveYouTubeTrack({ title, artist });
     if (track) {
       console.log(`✅ YouTube resolve succeeded: videoId=${track.youtubeVideoId}`);
-    } else {
-      console.warn(`❌ YouTube resolve failed: returned null`);
+      res.json({ track, error: null });
+      return;
     }
-    res.json({ track });
+
+    console.warn(`❌ YouTube resolve failed: returned null`);
+    res.json({ track: null, error: 'YouTube resolution returned no candidates or failed.' });
   } catch (error) {
     console.error(`❌ YouTube resolve endpoint error: ${String(error)}`);
     res.status(500).json({ error: 'Failed to resolve YouTube track', details: String(error) });
