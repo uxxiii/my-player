@@ -329,9 +329,12 @@ app.get('/api/audio', async (req, res) => {
     }
 
     const contentType = audioResponse.headers.get('content-type') || 'audio/mpeg';
+    const requestOrigin = String(req.headers.origin || '*');
+
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Vary', 'Origin');
 
     const buffer = await audioResponse.arrayBuffer();
     res.end(Buffer.from(buffer));
