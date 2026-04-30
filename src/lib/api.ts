@@ -26,30 +26,6 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
 export const api = {
   health: () => request<{ ok: boolean }>('/health'),
-  getSpotifyAuthUrl: (redirectUri: string) =>
-    request<{ authUrl: string }>(`/spotify/auth-url?redirectUri=${encodeURIComponent(redirectUri)}`),
-  exchangeSpotifyCode: (code: string, redirectUri: string) =>
-    request<{
-      access_token: string;
-      token_type: string;
-      expires_in: number;
-      refresh_token?: string;
-      scope: string;
-    }>('/spotify/token', {
-      method: 'POST',
-      body: JSON.stringify({ code, redirectUri }),
-    }),
-  getSpotifyPlaylists: (accessToken: string) =>
-    request<{ playlists: Array<{ id: string; name: string; imageUrl?: string; tracksCount: number }> }>(
-      '/spotify/playlists',
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    ),
-  getSpotifyPlaylistTracks: (accessToken: string, playlistId: string) =>
-    request<{ tracks: Track[] }>(`/spotify/playlists/${playlistId}/tracks`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }),
   getTrendingTracks: () => request<{ tracks: Track[] }>('/tracks/trending'),
   searchTracks: (q: string) => request<{ tracks: Track[] }>(`/search?q=${encodeURIComponent(q)}`),
   getRecommendations: (artist: string) =>

@@ -22,8 +22,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('myplayer_user');
-    navigate('/');
+    navigate('/login');
   };
 
   return (
@@ -69,18 +68,34 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
           <Settings size={16} />
           <span className="hidden sm:inline">Settings</span>
         </Link>
-        <div className="h-10 px-2 md:px-3 rounded-lg bg-dark-bg border border-dark-border text-gray-200 flex items-center gap-2 whitespace-nowrap">
-          <UserCircle size={16} />
-          <span className="hidden sm:inline text-sm md:text-base">{user?.username || 'Profile'}</span>
-        </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="h-10 px-2 md:px-3 rounded-lg bg-dark-bg border border-dark-border text-gray-300 hover:text-red-400"
-          title="Logout"
-        >
-          <LogOut size={16} />
-        </button>
+        {user ? (
+          <>
+            <div className="h-10 px-2 md:px-3 rounded-lg bg-dark-bg border border-dark-border text-gray-200 flex items-center gap-2 whitespace-nowrap">
+              {user.profileImage ? (
+                <img src={user.profileImage} alt={user.username} className="h-6 w-6 rounded-full object-cover" />
+              ) : (
+                <UserCircle size={16} />
+              )}
+              <span className="hidden sm:inline text-sm md:text-base">{user.username}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="h-10 px-2 md:px-3 rounded-lg bg-dark-bg border border-dark-border text-gray-300 hover:text-red-400"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </>
+        ) : (
+          <Link
+            to="/login"
+            className="h-10 px-3 rounded-lg bg-blue-primary text-white font-semibold hover:bg-blue-secondary flex items-center gap-2 whitespace-nowrap"
+          >
+            <UserCircle size={16} />
+            <span className="hidden sm:inline">Login</span>
+          </Link>
+        )}
       </div>
     </header>
   );

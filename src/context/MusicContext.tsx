@@ -42,7 +42,6 @@ interface MusicContextType {
   deletePlaylist: (id: string) => Promise<void>;
   addTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
-  importSpotifyPlaylist: (name: string, imageUrl: string | undefined, tracks: Track[]) => Promise<Playlist>;
 
   user: User | null;
   setUser: (user: User | null) => void;
@@ -96,6 +95,17 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem(RECENT_SCROBBLES_STORAGE_KEY, JSON.stringify(recentScrobbles));
     }
   }, [recentScrobbles]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (user) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      return;
+    }
+
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }, [user]);
 
   const updatePlayerState = useCallback((updater: (prev: PlayerState) => PlayerState) => {
     setPlayerState((prev) => {
@@ -617,23 +627,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPlaylists((prev) => prev.map((item) => (item.id === playlistId ? playlist : item)));
   };
 
-  const importSpotifyPlaylist = async (name: string, imageUrl: string | undefined, tracks: Track[]) => {
-    const { playlist } = await api.createPlaylist({
-      name,
-      description: 'Imported from Spotify',
-      imageUrl,
-    });
-
-    let importedPlaylist = playlist;
-    for (const track of tracks) {
-      const response = await api.addTrackToPlaylist(importedPlaylist.id, track);
-      importedPlaylist = response.playlist;
-    }
-
-    setPlaylists((prev) => [...prev, importedPlaylist]);
-    return importedPlaylist;
-  };
-
   const removeTrackFromPlaylist = async (playlistId: string, trackId: string) => {
     const { playlist } = await api.removeTrackFromPlaylist(playlistId, trackId);
     setPlaylists((prev) => prev.map((item) => (item.id === playlistId ? playlist : item)));
@@ -672,7 +665,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deletePlaylist,
     addTrackToPlaylist,
     removeTrackFromPlaylist,
-    importSpotifyPlaylist,
     user,
     setUser,
     isAuthenticated: !!user,

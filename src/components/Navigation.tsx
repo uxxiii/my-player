@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, ListMusic, Music, PanelLeft, Plus, CloudDownload } from 'lucide-react';
+import { Heart, ListMusic, Music, PanelLeft, Plus } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useMusic } from '../context/MusicContext';
 
@@ -81,25 +81,6 @@ export const Navigation: React.FC<NavigationProps> = ({
             <Plus size={20} />
           </button>
         </div>
-
-        <NavLink
-          to="/spotify-import"
-          title="Import from Spotify"
-          className={({ isActive }) =>
-            `playlist-item mb-3 flex items-center ${isCollapsed ? `${railItemClassName} justify-center p-0.5` : 'gap-3 text-sm text-gray-300'} ${
-              isActive ? 'bg-dark-border text-blue-primary' : ''
-            }`
-          }
-        >
-          {isCollapsed ? (
-            <CloudDownload size={20} className="text-green-400" />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-[0.72rem] bg-green-500/10 text-green-400">
-              <CloudDownload size={16} />
-            </div>
-          )}
-          {!isCollapsed && <span className="truncate">Import from Spotify</span>}
-        </NavLink>
 
         <div className={`space-y-2 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
           <NavLink

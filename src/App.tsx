@@ -9,7 +9,7 @@ import { YouTubeHostBridge } from './components/YouTubeHostBridge';
 import { Home } from './pages/Home';
 import { Search } from './pages/Search';
 import { Playlist } from './pages/Playlist';
-import { SpotifyImport } from './pages/SpotifyImport';
+import { Login } from './pages/Login';
 import { Settings } from './pages/Settings';
 import { LikedSongs } from './pages/LikedSongs';
 import { NowPlayingPanel } from './components/NowPlayingPanel';
@@ -124,9 +124,9 @@ function AppContent() {
             <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/playlist/:id" element={<Playlist />} />
-                <Route path="/spotify-import" element={<SpotifyImport />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/liked" element={<LikedSongs />} />
               </Routes>

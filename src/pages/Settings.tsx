@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Settings as SettingsIcon, User, Moon, LogOut } from 'lucide-react';
 import { useMusic } from '../context/MusicContext';
 
 export const Settings: React.FC = () => {
   const { user, setUser, likedTracks, playlists } = useMusic();
+  const navigate = useNavigate();
   const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState(user?.email || '');
 
@@ -20,9 +22,36 @@ export const Settings: React.FC = () => {
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('myplayer_user');
-    window.location.href = '/';
+    navigate('/login');
   };
+
+  if (!user) {
+    return (
+      <div className="main-content p-6 max-w-4xl">
+        <div className="rounded-[2rem] border border-white/10 bg-dark-card p-8 shadow-2xl shadow-black/20">
+          <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Account</p>
+          <h1 className="mt-2 text-4xl font-bold text-white">Sign in to save your profile</h1>
+          <p className="mt-3 max-w-2xl text-gray-400">
+            Log in with Google so your profile, playlists, and likes stay attached to your account.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              to="/login"
+              className="inline-flex items-center rounded-2xl bg-blue-primary px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-secondary"
+            >
+              Go to Login
+            </Link>
+            <Link
+              to="/"
+              className="inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-semibold text-white transition-colors hover:bg-white/[0.06]"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="main-content p-6 max-w-4xl">

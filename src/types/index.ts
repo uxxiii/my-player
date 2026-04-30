@@ -32,6 +32,7 @@ export interface User {
   profileImage?: string;
   playlists: Playlist[];
   likedTracks: Track[];
+  provider?: 'google' | 'local';
 }
 
 export interface PlayerState {
