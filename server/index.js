@@ -106,10 +106,13 @@ const buildYouTubeQueries = ({ title, artist }) => {
     `${artist} ${title} official audio`,
     `${title} ${artist} audio`,
     `${artist} ${title} audio`,
-    `${title} ${artist} topic`,
-    `${artist} ${title} topic`,
     `${title} ${artist} official video`,
+    `${artist} ${title} official video`,
+    `${title} ${artist} music video`,
+    `${artist} ${title} music video`,
+    `${title} ${artist} lyrics`,
     `${artist} ${title} lyrics`,
+    `${artist} ${title} song`,
   ];
 
   return [...new Set(queries.map((value) => value.trim()).filter(Boolean))];
@@ -143,28 +146,43 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
   }
 
   const queries = buildYouTubeQueries({ title, artist });
-  const results = await Promise.allSettled(
-    queries.map(async (query) => {
-      const ytUrl =
-        'https://www.googleapis.com/youtube/v3/search' +
-        `?part=snippet&type=video&maxResults=5&videoEmbeddable=true&videoCategoryId=10&q=${encodeURIComponent(query)}&key=${ytKey}`;
-      const response = await fetch(ytUrl);
 
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`YouTube search failed: ${text}`);
-      }
+  const fetchYouTubeResults = async (query, withCategory = true) => {
+    let ytUrl =
+      'https://www.googleapis.com/youtube/v3/search' +
+      `?part=snippet&type=video&maxResults=6&videoEmbeddable=true&q=${encodeURIComponent(query)}&key=${ytKey}`;
 
-      const data = await response.json();
-      return Array.isArray(data.items) ? data.items : [];
-    })
-  );
+    if (withCategory) {
+      ytUrl += '&videoCategoryId=10';
+    }
 
-  const candidates = results
-    .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-    .filter((item) => item?.id?.videoId);
+    const response = await fetch(ytUrl);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`YouTube search failed: ${text}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data.items) ? data.items : [];
+  };
+
+  let candidates = [];
+  const runSearch = async (withCategory) => {
+    const results = await Promise.allSettled(
+      queries.map(async (query) => await fetchYouTubeResults(query, withCategory))
+    );
+    return results
+      .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+      .filter((item) => item?.id?.videoId);
+  };
+
+  candidates = await runSearch(true);
+  if (candidates.length === 0) {
+    candidates = await runSearch(false);
+  }
 
   if (candidates.length === 0) {
+    console.warn('⚠️ YouTube resolution returned no candidates for', title, artist);
     return null;
   }
 
