@@ -38,23 +38,12 @@ const ResizeHandle: React.FC<{ onPointerDown: () => void; className?: string }> 
 );
 
 function AppContent() {
-  const { user } = useMusic();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [leftPanelWidth, setLeftPanelWidth] = useState(280);
   const [rightPanelWidth, setRightPanelWidth] = useState(320);
   const [draggingPanel, setDraggingPanel] = useState<'left' | 'right' | null>(null);
-
-  // If not logged in, show only the login page
-  if (!user) {
-    return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
 
   useEffect(() => {
     if (!draggingPanel) return;
@@ -169,6 +158,7 @@ function App() {
   return (
     <MusicProvider>
       <Router>
+        <AuthGuard />
         <AppContent />
       </Router>
     </MusicProvider>
