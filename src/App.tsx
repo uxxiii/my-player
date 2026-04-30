@@ -9,11 +9,11 @@ import { YouTubeHostBridge } from './components/YouTubeHostBridge';
 import { Home } from './pages/Home';
 import { Search } from './pages/Search';
 import { Playlist } from './pages/Playlist';
-import { Login } from './pages/Login';
 import { Settings } from './pages/Settings';
 import { LikedSongs } from './pages/LikedSongs';
 import { NowPlayingPanel } from './components/NowPlayingPanel';
-import { MusicProvider, useMusic } from './context/MusicContext';
+import { MusicProvider } from './context/MusicContext';
+import { AuthGuard } from './components/ProtectedRoute';
 
 const LEFT_PANEL_MIN = 232;
 const LEFT_PANEL_MAX = 420;
