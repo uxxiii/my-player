@@ -20,19 +20,7 @@ const allowedOrigins = new Set([
 
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-
-      if (allowedOrigins.has(origin)) {
-        callback(null, true);
-        return;
-      }
-
-      callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
+    origin: true, // Allow all origins temporarily for testing
   })
 );
 app.use(express.json({ limit: '2mb' }));
