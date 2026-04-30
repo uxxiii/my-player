@@ -1,6 +1,7 @@
 import type { Playlist, Track } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+// Hardcoded for production - will be replaced with env var in build
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://my-player-tj2q.onrender.com/api';
 
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${API_BASE}${path}`, {
