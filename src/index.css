@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply transition-colors duration-200;
+}
+
+body {
+  @apply bg-dark-bg text-white;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-dark-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-blue-primary rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-blue-secondary;
+}
+
+/* Glassmorphism effect */
+.glass {
+  @apply bg-white/10 backdrop-blur-md border border-white/20;
+}
+
+/* Music player styles */
+.player-container {
+  @apply fixed bottom-0 left-0 right-0 z-50 border-t border-dark-border bg-dark-card/95 backdrop-blur-xl;
+}
+
+/* Playlist item hover */
+.playlist-item {
+  @apply p-3 rounded-lg cursor-pointer hover:bg-dark-border transition-colors;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-blue-primary hover:bg-blue-secondary text-white px-4 py-2 rounded-lg font-semibold transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-dark-card hover:bg-dark-border text-white px-4 py-2 rounded-lg font-semibold transition-colors border border-dark-border;
+}
+
+/* Sidebar styles */
+.sidebar {
+  @apply relative h-full overflow-y-auto border-r border-dark-border bg-dark-card;
+}
+
+/* Main content area */
+.main-content {
+  @apply flex-1 overflow-y-auto pb-8;
+}
+
+.app-resize-handle {
+  @apply relative z-20 h-full w-3 shrink-0 items-center justify-center bg-transparent transition-colors touch-none;
+}
+
+.app-resize-handle:hover,
+.app-resize-handle:focus-visible {
+  @apply bg-white/[0.03] outline-none;
+}
+
+.app-resize-handle__line {
+  @apply h-16 w-px rounded-full bg-white/10 transition-colors;
+}
+
+.app-resize-handle:hover .app-resize-handle__line,
+.app-resize-handle:focus-visible .app-resize-handle__line {
+  @apply bg-blue-primary;
+}
