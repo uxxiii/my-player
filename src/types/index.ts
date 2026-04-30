@@ -44,6 +44,7 @@ export interface PlayerState {
   queue: Track[];
   currentIndex: number;
   playbackMode: 'audio' | 'youtube' | null;
+  playbackError?: string | null;
 }
 
 export interface AuthState {

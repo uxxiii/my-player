@@ -124,9 +124,14 @@ export const NowPlayingPanel: React.FC = () => {
                       Live {formatTime(playerState.currentTime)}
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-gray-300">
-                      {playerState.playbackMode === 'youtube' || track.youtubeVideoId ? 'Full track' : 'Preview'}
+                      {playerState.playbackMode === 'youtube' ? 'Full track' : track.youtubeVideoId ? 'Full track available' : 'Full track unavailable'}
                     </span>
                   </div>
+                  {playerState.playbackError && (
+                    <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                      {playerState.playbackError}
+                    </div>
+                  )}
                 </section>
 
                 <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-4">
