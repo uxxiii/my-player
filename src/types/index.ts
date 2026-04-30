@@ -8,6 +8,8 @@ export interface Track {
   audioUrl?: string;
   preview_url?: string;
   youtubeVideoId?: string;
+  playbackType?: 'preview' | 'youtube' | 'full_audio';
+  sourceLabel?: string;
 }
 
 export interface ScrobbleEntry {

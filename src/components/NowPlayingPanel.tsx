@@ -50,14 +50,19 @@ const LyricsModal: React.FC<LyricsModalProps> = ({ isOpen, lyrics, loading, erro
 };
 
 export const NowPlayingPanel: React.FC = () => {
-  const { playerState, recentScrobbles } = useMusic();
+  const { playerState, recentScrobbles, saveManualYouTubeSource, playTrack } = useMusic();
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showLyricsModal, setShowLyricsModal] = useState(false);
+  const [manualYoutubeUrl, setManualYoutubeUrl] = useState('');
+  const [manualSourceSaving, setManualSourceSaving] = useState(false);
+  const [manualSourceMessage, setManualSourceMessage] = useState('');
 
   const track = playerState.currentTrack;
   const upcomingTracks = playerState.queue.slice(playerState.currentIndex + 1, playerState.currentIndex + 6);
+  const isFullTrack =
+    !!track?.youtubeVideoId || track?.playbackType === 'full_audio' || playerState.playbackMode === 'youtube';
 
   const formatTime = (time: number) => {
     if (!time || Number.isNaN(time)) return '0:00';
@@ -86,6 +91,25 @@ export const NowPlayingPanel: React.FC = () => {
       console.error('Lyrics fetch failed:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveManualSource = async () => {
+    if (!track || !manualYoutubeUrl.trim()) return;
+
+    setManualSourceSaving(true);
+    setManualSourceMessage('');
+
+    try {
+      const updatedTrack = await saveManualYouTubeSource(track, manualYoutubeUrl.trim());
+      setManualYoutubeUrl('');
+      setManualSourceMessage('Saved. Replaying from your YouTube link.');
+      playTrack(updatedTrack);
+    } catch (err) {
+      console.error('Manual YouTube source save failed:', err);
+      setManualSourceMessage('Could not save that YouTube link. Paste a full YouTube URL or video ID.');
+    } finally {
+      setManualSourceSaving(false);
     }
   };
 
@@ -124,8 +148,13 @@ export const NowPlayingPanel: React.FC = () => {
                       Live {formatTime(playerState.currentTime)}
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-gray-300">
-                      {playerState.playbackMode === 'youtube' ? 'Full track' : 'Preview'}
+                      {isFullTrack ? 'Full track' : 'Preview'}
                     </span>
+                    {track.sourceLabel && (
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-gray-300">
+                        {track.sourceLabel}
+                      </span>
+                    )}
                   </div>
                 </section>
 
@@ -152,6 +181,33 @@ export const NowPlayingPanel: React.FC = () => {
                   >
                     <FileText size={18} />
                   </button>
+
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Fix Full Track</p>
+                    <p className="mt-2 text-sm text-gray-400">
+                      Paste a YouTube link once and MyPlayer will remember it for this song.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2">
+                      <input
+                        type="text"
+                        value={manualYoutubeUrl}
+                        onChange={(event) => setManualYoutubeUrl(event.target.value)}
+                        placeholder="Paste YouTube URL or video ID"
+                        className="rounded-xl border border-white/10 bg-dark-card px-3 py-2 text-sm text-white outline-none transition-colors focus:border-blue-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveManualSource()}
+                        disabled={!track || manualSourceSaving || !manualYoutubeUrl.trim()}
+                        className="rounded-xl bg-blue-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-secondary disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-gray-500"
+                      >
+                        {manualSourceSaving ? 'Saving...' : 'Save YouTube Source'}
+                      </button>
+                    </div>
+                    {manualSourceMessage && (
+                      <p className="mt-2 text-sm text-gray-400">{manualSourceMessage}</p>
+                    )}
+                  </div>
                 </section>
 
                 <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-4">

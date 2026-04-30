@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { getPlaylists, savePlaylists } from './storage.js';
+import { getPlaylists, getTrackOverrides, savePlaylists, saveTrackOverrides } from './storage.js';
 
 dotenv.config();
 
@@ -18,9 +18,92 @@ app.use(
 );
 app.use(express.json({ limit: '2mb' }));
 
+const buildProxyAudioUrl = (sourceUrl, baseUrl = '') =>
+  sourceUrl ? `${baseUrl}/api/audio?url=${encodeURIComponent(sourceUrl)}` : undefined;
+
+const getTrackLookupKey = ({ title, artist }) => `${normalize(title)}::${normalize(artist)}`;
+
+const extractYouTubeVideoId = (value) => {
+  const input = String(value ?? '').trim();
+  if (!input) return null;
+
+  const directMatch = input.match(/^[a-zA-Z0-9_-]{11}$/);
+  if (directMatch) return directMatch[0];
+
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtube\.com\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+};
+
+const sanitizeTrackOverride = (override) => ({
+  title: override.title ?? '',
+  artist: override.artist ?? '',
+  album: override.album ?? 'YouTube',
+  duration: Number(override.duration ?? 0),
+  imageUrl: override.imageUrl ?? '',
+  youtubeVideoId: override.youtubeVideoId ?? undefined,
+  externalAudioUrl: override.externalAudioUrl ?? undefined,
+  preview_url: override.preview_url ?? undefined,
+  playbackType: override.playbackType ?? (override.youtubeVideoId ? 'youtube' : 'preview'),
+  sourceLabel: override.sourceLabel ?? (override.youtubeVideoId ? 'YouTube' : 'Preview'),
+  updatedAt: override.updatedAt ?? new Date().toISOString(),
+});
+
+const materializeTrackOverride = (override, baseUrl = '') => {
+  if (!override) return null;
+
+  return {
+    id: `${override.title}-${override.artist}`.toLowerCase().replace(/\s+/g, '-'),
+    title: override.title,
+    artist: override.artist,
+    album: override.album ?? 'Unknown',
+    duration: Number(override.duration ?? 0),
+    imageUrl: override.imageUrl ?? '',
+    audioUrl: override.externalAudioUrl ? buildProxyAudioUrl(override.externalAudioUrl, baseUrl) : undefined,
+    preview_url: override.preview_url ?? undefined,
+    youtubeVideoId: override.youtubeVideoId ?? undefined,
+    playbackType: override.playbackType ?? (override.youtubeVideoId ? 'youtube' : 'preview'),
+    sourceLabel: override.sourceLabel ?? (override.youtubeVideoId ? 'YouTube' : 'Preview'),
+  };
+};
+
+const findTrackOverride = async ({ title, artist }) => {
+  const overrides = await getTrackOverrides();
+  const key = getTrackLookupKey({ title, artist });
+  return overrides[key] ? sanitizeTrackOverride(overrides[key]) : null;
+};
+
+const upsertTrackOverride = async ({ title, artist, track }) => {
+  const overrides = await getTrackOverrides();
+  const key = getTrackLookupKey({ title, artist });
+  overrides[key] = sanitizeTrackOverride({
+    title,
+    artist,
+    album: track.album,
+    duration: track.duration,
+    imageUrl: track.imageUrl,
+    youtubeVideoId: track.youtubeVideoId,
+    externalAudioUrl: track.externalAudioUrl ?? track.audioUrl,
+    preview_url: track.preview_url,
+    playbackType: track.playbackType,
+    sourceLabel: track.sourceLabel,
+    updatedAt: new Date().toISOString(),
+  });
+  await saveTrackOverrides(overrides);
+  return overrides[key];
+};
+
 const mapItunesTrack = (track, baseUrl = '') => {
   const previewUrl = track.previewUrl;
-  const proxiedAudioUrl = previewUrl ? `${baseUrl}/api/audio?url=${encodeURIComponent(previewUrl)}` : undefined;
+  const proxiedAudioUrl = buildProxyAudioUrl(previewUrl, baseUrl);
 
   return {
     id: String(track.trackId ?? track.collectionId ?? Date.now()),
@@ -32,6 +115,8 @@ const mapItunesTrack = (track, baseUrl = '') => {
     audioUrl: proxiedAudioUrl,
     preview_url: previewUrl,
     youtubeVideoId: undefined,
+    playbackType: 'preview',
+    sourceLabel: 'iTunes Preview',
   };
 };
 
@@ -101,39 +186,151 @@ const buildRelatedQueries = ({ artist, title, album, seedArtists = [], seedTitle
 };
 
 const buildYouTubeQueries = ({ title, artist }) => {
+  const cleanTitle = String(title ?? '')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\b(feat|ft)\.?\b.*$/i, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const cleanArtist = String(artist ?? '')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   const queries = [
-    `${title} ${artist} official audio`,
-    `${artist} ${title} official audio`,
-    `${title} ${artist} audio`,
-    `${artist} ${title} audio`,
-    `${title} ${artist} official video`,
-    `${artist} ${title} official video`,
-    `${title} ${artist} music video`,
-    `${artist} ${title} music video`,
-    `${title} ${artist} lyrics`,
-    `${artist} ${title} lyrics`,
-    `${artist} ${title} song`,
+    `${cleanTitle} ${cleanArtist} official audio`,
+    `${cleanArtist} ${cleanTitle} official audio`,
+    `${cleanTitle} ${cleanArtist} audio`,
+    `${cleanArtist} ${cleanTitle} audio`,
+    `${cleanTitle} ${cleanArtist} official video`,
+    `${cleanArtist} ${cleanTitle} official video`,
+    `${cleanTitle} ${cleanArtist} music video`,
+    `${cleanArtist} ${cleanTitle} music video`,
+    `${cleanTitle} ${cleanArtist} song`,
+    `${cleanArtist} ${cleanTitle} song`,
+    `${cleanTitle} ${cleanArtist}`,
+    `${cleanArtist} ${cleanTitle}`,
+    cleanTitle,
   ];
 
   return [...new Set(queries.map((value) => value.trim()).filter(Boolean))];
 };
+
+const extractBracketedJson = (source, marker) => {
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return null;
+
+  const startIndex = source.indexOf('{', markerIndex);
+  if (startIndex < 0) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaping = false;
+
+  for (let index = startIndex; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (escaping) {
+      escaping = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaping = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === '{') depth += 1;
+    if (char === '}') depth -= 1;
+
+    if (depth === 0) {
+      return source.slice(startIndex, index + 1);
+    }
+  }
+
+  return null;
+};
+
+const collectVideoRenderers = (node, results = []) => {
+  if (!node) return results;
+
+  if (Array.isArray(node)) {
+    node.forEach((item) => collectVideoRenderers(item, results));
+    return results;
+  }
+
+  if (typeof node !== 'object') {
+    return results;
+  }
+
+  if (node.videoRenderer) {
+    results.push(node.videoRenderer);
+  }
+
+  Object.values(node).forEach((value) => collectVideoRenderers(value, results));
+  return results;
+};
+
+const extractRunsText = (value) => {
+  if (typeof value === 'string') return value;
+  if (!value) return '';
+  if (Array.isArray(value.runs)) {
+    return value.runs.map((run) => run?.text ?? '').join('').trim();
+  }
+  if (typeof value.simpleText === 'string') {
+    return value.simpleText.trim();
+  }
+  return '';
+};
+
+const mapHtmlVideoRendererToCandidate = (videoRenderer) => ({
+  id: {
+    videoId: videoRenderer.videoId,
+  },
+  snippet: {
+    title: extractRunsText(videoRenderer.title),
+    channelTitle: extractRunsText(videoRenderer.ownerText) || extractRunsText(videoRenderer.longBylineText),
+    thumbnails: {
+      high: {
+        url:
+          videoRenderer.thumbnail?.thumbnails?.[videoRenderer.thumbnail.thumbnails.length - 1]?.url ??
+          '',
+      },
+    },
+  },
+});
 
 const scoreYouTubeMatch = ({ item, title, artist }) => {
   const normalizedTitle = normalize(title);
   const normalizedArtist = normalize(artist);
   const snippetTitle = normalize(item.snippet?.title ?? '');
   const snippetChannel = normalize(item.snippet?.channelTitle ?? '');
+  const titleTokens = tokenize(title);
+  const artistTokens = tokenize(artist);
 
   let score = 0;
   if (snippetTitle.includes(normalizedTitle)) score += 8;
   if (snippetTitle.includes(normalizedArtist)) score += 5;
   if (snippetChannel.includes(normalizedArtist)) score += 4;
+  if (snippetChannel.includes('topic')) score += 5;
   if (snippetTitle.includes('official audio')) score += 6;
-  if (snippetTitle.includes('topic')) score += 5;
   if (snippetTitle.includes('official video')) score += 3;
   if (snippetTitle.includes('lyrics')) score -= 2;
   if (snippetTitle.includes('live')) score -= 3;
   if (snippetTitle.includes('remix')) score -= 2;
+  if (snippetTitle.includes('teaser')) score -= 3;
+  if (snippetTitle.includes('shorts')) score -= 4;
+
+  score += titleTokens.filter((token) => snippetTitle.includes(token)).length * 2;
+  score += artistTokens.filter((token) => snippetTitle.includes(token) || snippetChannel.includes(token)).length * 2;
 
   return score;
 };
@@ -257,6 +454,228 @@ const resolveYouTubeTrack = async ({ title, artist, debug = false }) => {
       return { track: null, debug: debugInfo };
     }
     return null;
+  }
+};
+
+const resolveYouTubeTrackWithFallback = async ({ title, artist, debug = false }) => {
+  const initialResult = await resolveYouTubeTrack({ title, artist, debug: true });
+  if (initialResult?.track?.youtubeVideoId) {
+    return debug ? initialResult : initialResult.track;
+  }
+
+  const queries = buildYouTubeQueries({ title, artist }).slice(0, 6);
+  const debugInfo = {
+    ...(initialResult?.debug ?? {}),
+    fallback: {
+      mode: 'youtube_html',
+      queries,
+      results: [],
+      selected: null,
+    },
+  };
+
+  const fetchYouTubeHtmlResults = async (query) => {
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&hl=en`;
+    console.log(`YouTube HTML fallback search: "${query}"`);
+
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      debugInfo.fallback.results.push({
+        query,
+        status: 'error',
+        statusCode: response.status,
+      });
+      throw new Error(`YouTube HTML fallback failed: ${response.status} ${text}`);
+    }
+
+    const html = await response.text();
+    const jsonText =
+      extractBracketedJson(html, 'var ytInitialData = ') ??
+      extractBracketedJson(html, 'window["ytInitialData"] = ') ??
+      extractBracketedJson(html, 'ytInitialData = ');
+
+    if (!jsonText) {
+      debugInfo.fallback.results.push({
+        query,
+        status: 'parse_error',
+      });
+      throw new Error('Unable to parse YouTube HTML fallback results');
+    }
+
+    const items = collectVideoRenderers(JSON.parse(jsonText))
+      .filter((videoRenderer) => typeof videoRenderer?.videoId === 'string' && videoRenderer.videoId.length > 0)
+      .slice(0, 12)
+      .map(mapHtmlVideoRendererToCandidate);
+
+    debugInfo.fallback.results.push({
+      query,
+      status: 'ok',
+      itemCount: items.length,
+    });
+    return items;
+  };
+
+  try {
+    const results = await Promise.allSettled(
+      queries.map(async (query) => await fetchYouTubeHtmlResults(query))
+    );
+
+    const deduped = new Map();
+    results.forEach((result) => {
+      if (result.status !== 'fulfilled') {
+        console.error(`YouTube HTML fallback query failed: ${String(result.reason)}`);
+        return;
+      }
+
+      result.value.forEach((item) => {
+        const videoId = item?.id?.videoId;
+        if (videoId && !deduped.has(videoId)) {
+          deduped.set(videoId, item);
+        }
+      });
+    });
+
+    const candidates = [...deduped.values()];
+    if (candidates.length === 0) {
+      return debug ? { track: null, debug: debugInfo } : null;
+    }
+
+    const bestCandidate = candidates.sort((left, right) => {
+      const rightScore = scoreYouTubeMatch({ item: right, title, artist });
+      const leftScore = scoreYouTubeMatch({ item: left, title, artist });
+      return rightScore - leftScore;
+    })[0];
+
+    const track = {
+      id: `${title}-${artist}`.toLowerCase().replace(/\s+/g, '-'),
+      title,
+      artist,
+      album: 'YouTube',
+      duration: 0,
+      imageUrl:
+        bestCandidate.snippet?.thumbnails?.high?.url ??
+        bestCandidate.snippet?.thumbnails?.medium?.url ??
+        '',
+      youtubeVideoId: bestCandidate.id.videoId,
+    };
+
+    debugInfo.fallback.selected = {
+      title: bestCandidate.snippet?.title ?? '',
+      channelTitle: bestCandidate.snippet?.channelTitle ?? '',
+      videoId: bestCandidate.id.videoId,
+      score: scoreYouTubeMatch({ item: bestCandidate, title, artist }),
+    };
+
+    return debug ? { track, debug: debugInfo } : track;
+  } catch (error) {
+    debugInfo.fallback.error = String(error);
+    return debug ? { track: null, debug: debugInfo } : null;
+  }
+};
+
+const resolveJamendoTrack = async ({ title, artist, baseUrl = '', debug = false }) => {
+  const clientId = String(process.env.JAMENDO_CLIENT_ID || '').trim();
+  if (!clientId) {
+    return debug
+      ? { track: null, debug: { provider: 'jamendo', skipped: true, reason: 'JAMENDO_CLIENT_ID is not set' } }
+      : null;
+  }
+
+  const baseApiUrl = 'https://api.jamendo.com/v3.0/tracks';
+  const queryParams = new URLSearchParams({
+    client_id: clientId,
+    format: 'json',
+    limit: '10',
+    namesearch: title,
+    artist_name: artist,
+    audioformat: 'mp32',
+    imagesize: '300',
+    include: 'musicinfo',
+    order: 'relevance',
+  });
+
+  try {
+    const response = await fetch(`${baseApiUrl}/?${queryParams.toString()}`);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Jamendo search failed: ${response.status} ${text}`);
+    }
+
+    const data = await response.json();
+    const results = Array.isArray(data.results) ? data.results : [];
+    if (results.length === 0) {
+      return debug ? { track: null, debug: { provider: 'jamendo', resultCount: 0 } } : null;
+    }
+
+    const bestMatch = results
+      .map((item) => {
+        const candidate = {
+          title: item.name ?? '',
+          artist: item.artist_name ?? '',
+          album: item.album_name ?? 'Jamendo',
+          duration: Number(item.duration ?? 0),
+          imageUrl: item.image ?? item.album_image ?? '',
+          externalAudioUrl: item.audio ?? '',
+        };
+
+        let score = 0;
+        const normalizedCandidateTitle = normalize(candidate.title);
+        const normalizedCandidateArtist = normalize(candidate.artist);
+        const normalizedTitle = normalize(title);
+        const normalizedArtist = normalize(artist);
+
+        if (normalizedCandidateTitle.includes(normalizedTitle)) score += 8;
+        if (normalizedCandidateArtist.includes(normalizedArtist)) score += 7;
+        score += tokenize(title).filter((token) => normalizedCandidateTitle.includes(token)).length * 2;
+        score += tokenize(artist).filter((token) => normalizedCandidateArtist.includes(token)).length * 2;
+
+        return { candidate, score };
+      })
+      .sort((left, right) => right.score - left.score)[0];
+
+    if (!bestMatch?.candidate?.externalAudioUrl) {
+      return debug ? { track: null, debug: { provider: 'jamendo', resultCount: results.length, selected: null } } : null;
+    }
+
+    const track = {
+      id: `${title}-${artist}`.toLowerCase().replace(/\s+/g, '-'),
+      title,
+      artist,
+      album: bestMatch.candidate.album,
+      duration: bestMatch.candidate.duration,
+      imageUrl: bestMatch.candidate.imageUrl,
+      audioUrl: buildProxyAudioUrl(bestMatch.candidate.externalAudioUrl, baseUrl),
+      externalAudioUrl: bestMatch.candidate.externalAudioUrl,
+      preview_url: undefined,
+      youtubeVideoId: undefined,
+      playbackType: 'full_audio',
+      sourceLabel: 'Jamendo',
+    };
+
+    return debug
+      ? {
+          track,
+          debug: {
+            provider: 'jamendo',
+            resultCount: results.length,
+            selected: {
+              title: bestMatch.candidate.title,
+              artist: bestMatch.candidate.artist,
+              score: bestMatch.score,
+            },
+          },
+        }
+      : track;
+  } catch (error) {
+    return debug ? { track: null, debug: { provider: 'jamendo', error: String(error) } } : null;
   }
 };
 
@@ -406,24 +825,81 @@ app.post('/api/resolve-youtube-track', async (req, res) => {
 
   console.log(`📡 POST /api/resolve-youtube-track: "${title}" by "${artist}"`);
   try {
-    const result = await resolveYouTubeTrack({ title, artist, debug: true });
-    const track = result.track ?? null;
-    if (track) {
-      console.log(`✅ YouTube resolve succeeded: videoId=${track.youtubeVideoId}`);
-      res.json({ track, error: null, debug: result.debug });
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const storedOverride = await findTrackOverride({ title, artist });
+    if (storedOverride) {
+      const track = materializeTrackOverride(storedOverride, baseUrl);
+      res.json({ track, error: null, debug: { provider: 'override-cache' } });
       return;
     }
 
-    console.warn(`❌ YouTube resolve failed: returned null`);
+    const youtubeResult = await resolveYouTubeTrackWithFallback({ title, artist, debug: true });
+    const youtubeTrack = youtubeResult.track ?? null;
+    if (youtubeTrack?.youtubeVideoId) {
+      await upsertTrackOverride({ title, artist, track: youtubeTrack });
+      console.log(`✅ YouTube resolve succeeded: videoId=${youtubeTrack.youtubeVideoId}`);
+      res.json({ track: youtubeTrack, error: null, debug: youtubeResult.debug });
+      return;
+    }
+
+    const jamendoResult = await resolveJamendoTrack({ title, artist, baseUrl, debug: true });
+    const jamendoTrack = jamendoResult.track ?? null;
+    if (jamendoTrack?.audioUrl) {
+      await upsertTrackOverride({ title, artist, track: jamendoTrack });
+      res.json({
+        track: jamendoTrack,
+        error: null,
+        debug: {
+          youtube: youtubeResult.debug,
+          fullAudio: jamendoResult.debug,
+        },
+      });
+      return;
+    }
+
+    console.warn(`❌ YouTube/Jamendo resolve failed: returned null`);
     res.json({
       track: null,
-      error: 'YouTube resolution returned no candidates or failed.',
-      debug: result.debug,
+      error: 'No full-track source found.',
+      debug: {
+        youtube: youtubeResult.debug,
+        fullAudio: jamendoResult.debug,
+      },
     });
   } catch (error) {
     console.error(`❌ YouTube resolve endpoint error: ${String(error)}`);
     res.status(500).json({ error: 'Failed to resolve YouTube track', details: String(error) });
   }
+});
+
+app.post('/api/track-overrides/manual-youtube', async (req, res) => {
+  const { title, artist, youtubeUrl, imageUrl = '', duration = 0, album = 'YouTube' } = req.body ?? {};
+  if (!title || !artist || !youtubeUrl) {
+    return res.status(400).json({ error: 'Missing title, artist, or youtubeUrl' });
+  }
+
+  const youtubeVideoId = extractYouTubeVideoId(youtubeUrl);
+  if (!youtubeVideoId) {
+    return res.status(400).json({ error: 'Could not extract a YouTube video ID from the provided link' });
+  }
+
+  const override = await upsertTrackOverride({
+    title,
+    artist,
+    track: {
+      title,
+      artist,
+      album,
+      duration,
+      imageUrl,
+      youtubeVideoId,
+      playbackType: 'youtube',
+      sourceLabel: 'Manual YouTube',
+    },
+  });
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  res.status(201).json({ track: materializeTrackOverride(override, baseUrl) });
 });
 
 app.get('/api/playlists', async (_req, res) => {

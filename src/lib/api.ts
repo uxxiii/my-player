@@ -45,9 +45,17 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   resolveYouTubeTrack: (title: string, artist: string) =>
-    request<{ track: Track | null; error?: string }>('/resolve-youtube-track', {
+    request<{ track: Track | null; error?: string; debug?: unknown }>('/resolve-youtube-track', {
       method: 'POST',
       body: JSON.stringify({ title, artist }),
+    }),
+  saveManualYouTubeSource: (track: Pick<Track, 'title' | 'artist' | 'album' | 'duration' | 'imageUrl'>, youtubeUrl: string) =>
+    request<{ track: Track }>('/track-overrides/manual-youtube', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...track,
+        youtubeUrl,
+      }),
     }),
 
   getPlaylists: () => request<{ playlists: Playlist[] }>('/playlists'),

@@ -42,6 +42,7 @@ interface MusicContextType {
   deletePlaylist: (id: string) => Promise<void>;
   addTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
+  saveManualYouTubeSource: (track: Track, youtubeUrl: string) => Promise<Track>;
 
   user: User | null;
   setUser: (user: User | null) => void;
@@ -280,6 +281,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         queue: prev.queue.map((item) => (item.id === track.id ? { ...item, ...track } : item)),
       }));
 
+      setLikedTracks((prev) => {
+        const next = prev.map((item) => (item.id === track.id ? { ...item, ...track } : item));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(LIKED_TRACKS_STORAGE_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
+
       setPlaylists((prev) =>
         prev.map((playlist) => ({
           ...playlist,
@@ -292,7 +301,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const resolveTrackForPlayback = useCallback(
     async (track: Track) => {
-      if (track.youtubeVideoId) {
+      if (track.youtubeVideoId || (track.playbackType === 'full_audio' && !!track.audioUrl)) {
         console.log('🎵 Track already has YouTube ID:', track.youtubeVideoId);
         return track;
       }
@@ -303,15 +312,21 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log('🎵 YouTube API response:', response);
         const resolvedYouTubeTrack = response.track;
 
-        if (!resolvedYouTubeTrack?.youtubeVideoId) {
+        if (!resolvedYouTubeTrack) {
           console.warn('🎵 No YouTube ID found, backend error:', response.error ?? 'none');
+          if (response.debug) {
+            console.warn('YouTube resolve debug:', response.debug);
+          }
           return track;
         }
 
         const mergedTrack: Track = {
           ...track,
-          youtubeVideoId: resolvedYouTubeTrack.youtubeVideoId,
+          ...resolvedYouTubeTrack,
+          id: track.id,
           imageUrl: track.imageUrl || resolvedYouTubeTrack.imageUrl,
+          album: resolvedYouTubeTrack.album || track.album,
+          duration: resolvedYouTubeTrack.duration || track.duration,
         };
 
         cacheResolvedTrack(mergedTrack);
@@ -664,6 +679,20 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPlaylists((prev) => prev.map((item) => (item.id === playlistId ? playlist : item)));
   };
 
+  const saveManualYouTubeSource = async (track: Track, youtubeUrl: string) => {
+    const response = await api.saveManualYouTubeSource(track, youtubeUrl);
+    const mergedTrack: Track = {
+      ...track,
+      ...response.track,
+      id: track.id,
+      imageUrl: track.imageUrl || response.track.imageUrl,
+      album: response.track.album || track.album,
+      duration: response.track.duration || track.duration,
+    };
+    cacheResolvedTrack(mergedTrack);
+    return mergedTrack;
+  };
+
   const isTrackLiked = (trackId: string) => likedTracks.some((track) => track.id === trackId);
 
   const toggleLikeTrack = (track: Track) => {
@@ -697,6 +726,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deletePlaylist,
     addTrackToPlaylist,
     removeTrackFromPlaylist,
+    saveManualYouTubeSource,
     user,
     setUser,
     isAuthenticated: !!user,
