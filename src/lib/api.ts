@@ -1,7 +1,7 @@
 import type { Playlist, Track } from '../types';
 
 // Hardcoded for production - will be replaced with env var in build
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://my-player-tj2q.onrender.com/api';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://my-player-tj2q.onrender.com/api';
 
 console.log('🎵 API_BASE resolved to:', API_BASE);
 

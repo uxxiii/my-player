@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import type { PlayerState, Playlist, ScrobbleEntry, Track, User } from '../types';
-import { api } from '../lib/api';
+import { api, API_BASE } from '../lib/api';
 
 const USER_STORAGE_KEY = 'myplayer_user';
 const LIKED_TRACKS_STORAGE_KEY = 'myplayer_liked_tracks';
@@ -324,10 +324,27 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [cacheResolvedTrack]
   );
 
+  const normalizeAudioSource = (source?: string, fallback?: string): string | undefined => {
+      if (!source) return fallback;
+
+      // Avoid stale local development proxy URLs from old cached tracks.
+      if (source.startsWith('http://localhost:4000')) {
+        console.warn('⚠️ Rewriting stale localhost audio source to fallback preview URL:', source);
+        return fallback ?? source.replace(/^http:\/\/localhost:4000/, API_BASE);
+      }
+
+      // Use HTTPS on deployed hosts if the source was accidentally generated with HTTP.
+      if (source.startsWith('http://') && source.includes('/api/audio')) {
+        return source.replace(/^http:\/\//, 'https://');
+      }
+
+      return source;
+    };
+
   const startAudioTrack = useCallback(
     (track: Track, indexOverride?: number) => {
       const audio = audioRef.current;
-      const source = track.audioUrl ?? track.preview_url;
+      const source = normalizeAudioSource(track.audioUrl, track.preview_url) ?? track.preview_url;
 
       if (!source) {
         updatePlayerState((prev) => {
