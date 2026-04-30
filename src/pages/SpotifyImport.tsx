@@ -39,13 +39,15 @@ const readStoredAuth = (): StoredAuth | null => {
 export const SpotifyImport: React.FC = () => {
   const navigate = useNavigate();
   const { importSpotifyPlaylist } = useMusic();
+  const oauthCode = useMemo(() => new URLSearchParams(window.location.search).get('code'), []);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [importingIds, setImportingIds] = useState<string[]>([]);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const [auth, setAuth] = useState<StoredAuth | null>(() => readStoredAuth());
+  const [auth, setAuth] = useState<StoredAuth | null>(() => (oauthCode ? null : readStoredAuth()));
+  const [callbackHandled, setCallbackHandled] = useState(!oauthCode);
 
   const redirectUri = useMemo(
     () => import.meta.env.VITE_SPOTIFY_REDIRECT_URI || `${window.location.origin}/spotify-import`,
@@ -53,14 +55,13 @@ export const SpotifyImport: React.FC = () => {
   );
 
   useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get('code');
-    if (!code) return;
+    if (!oauthCode) return;
 
     const exchangeCode = async () => {
       try {
         setError('');
         setStatus('Connecting to Spotify...');
-        const token = await api.exchangeSpotifyCode(code, redirectUri);
+        const token = await api.exchangeSpotifyCode(oauthCode, redirectUri);
         const stored: StoredAuth = {
           accessToken: token.access_token,
           expiresAt: Date.now() + token.expires_in * 1000,
@@ -73,15 +74,17 @@ export const SpotifyImport: React.FC = () => {
         console.error('Spotify exchange failed:', exchangeError);
         setError('Could not connect your Spotify account. Please try again.');
         setStatus('');
+      } finally {
+        setCallbackHandled(true);
       }
     };
 
     void exchangeCode();
-  }, [redirectUri]);
+  }, [oauthCode, redirectUri]);
 
   useEffect(() => {
     const loadPlaylists = async () => {
-      if (!auth?.accessToken) return;
+      if (!callbackHandled || !auth?.accessToken) return;
 
       setLoadingPlaylists(true);
       try {
@@ -100,12 +103,14 @@ export const SpotifyImport: React.FC = () => {
     };
 
     void loadPlaylists();
-  }, [auth]);
+  }, [auth, callbackHandled]);
 
   const startSpotifyLogin = async () => {
     try {
       setError('');
       setStatus('Redirecting to Spotify...');
+      localStorage.removeItem(STORAGE_KEY);
+      setAuth(null);
       const { authUrl } = await api.getSpotifyAuthUrl(redirectUri);
       window.location.assign(authUrl);
     } catch (loginError) {
