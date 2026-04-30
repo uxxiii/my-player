@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import type { PlayerState, Playlist, ScrobbleEntry, Track, User } from '../types';
-import { api } from '../lib/api';
+import { api, API_BASE } from '../lib/api';
 
 const USER_STORAGE_KEY = 'myplayer_user';
 const LIKED_TRACKS_STORAGE_KEY = 'myplayer_liked_tracks';
@@ -21,7 +21,6 @@ const INITIAL_PLAYER_STATE: PlayerState = {
   queue: [],
   currentIndex: 0,
   playbackMode: null,
-  playbackError: null,
 };
 
 interface MusicContextType {
@@ -364,57 +363,98 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [initializeYouTubePlayer, pausePreviewAudio, pushScrobble, updatePlayerState]
   );
 
+  const normalizeAudioSource = (source?: string, fallback?: string): string | undefined => {
+    if (!source) return fallback;
+
+    // Avoid stale local development proxy URLs from old cached tracks.
+    if (source.startsWith('http://localhost:4000')) {
+      console.warn('⚠️ Rewriting stale localhost audio source to fallback preview URL:', source);
+      return fallback ?? source.replace(/^http:\/\/localhost:4000/, API_BASE);
+    }
+
+    // Use HTTPS on deployed hosts if the source was accidentally generated with HTTP.
+    if (source.startsWith('http://') && source.includes('/api/audio')) {
+      return source.replace(/^http:\/\//, 'https://');
+    }
+
+    return source;
+  };
+
+  const startAudioTrack = useCallback(
+    (track: Track, indexOverride?: number) => {
+      const audio = audioRef.current;
+      const source = normalizeAudioSource(track.audioUrl, track.preview_url) ?? track.preview_url;
+
+      if (!source) {
+        updatePlayerState((prev) => {
+          const queueIndex = prev.queue.findIndex((item) => item.id === track.id);
+          return {
+            ...prev,
+            currentTrack: track,
+            isPlaying: false,
+            currentTime: 0,
+            duration: track.duration,
+            currentIndex: indexOverride ?? (queueIndex >= 0 ? queueIndex : prev.currentIndex),
+            playbackMode: null,
+          };
+        });
+        return false;
+      }
+
+      if (youtubePlayerRef.current) {
+        youtubePlayerRef.current.pauseVideo();
+      }
+
+      audio.pause();
+      audio.src = '';
+      audio.currentTime = 0;
+      audio.crossOrigin = 'anonymous';
+      audio.preload = 'auto';
+      audio.src = source;
+      audio.load();
+      audio.play().catch((error) => console.error('Play error:', error));
+      pushScrobble(track);
+
+      updatePlayerState((prev) => {
+        const queueIndex = prev.queue.findIndex((item) => item.id === track.id);
+        return {
+          ...prev,
+          currentTrack: track,
+          isPlaying: true,
+          currentTime: 0,
+          duration: track.duration,
+          currentIndex: indexOverride ?? (queueIndex >= 0 ? queueIndex : prev.currentIndex),
+          playbackMode: 'audio',
+        };
+      });
+
+      return true;
+    },
+    [pushScrobble, updatePlayerState]
+  );
+
   const startTrack = useCallback(
     (track: Track, indexOverride?: number) => {
       console.log('🎵 Starting track:', track.title, 'by', track.artist);
       void (async () => {
-        updatePlayerState((prev) => ({
-          ...prev,
-          playbackError: null,
-        }));
-
         const playableTrack = await resolveTrackForPlayback(track);
         console.log('🎵 Resolved track:', playableTrack.youtubeVideoId ? 'Has YouTube ID' : 'No YouTube ID');
 
-        const queueIndex = playerStateRef.current.queue.findIndex((item) => item.id === track.id);
-        const resolvedIndex = indexOverride ?? (queueIndex >= 0 ? queueIndex : playerStateRef.current.currentIndex);
-
-        if (!playableTrack.youtubeVideoId) {
-          console.warn('🎵 Full track unavailable for:', track.title);
-          updatePlayerState((prev) => ({
-            ...prev,
-            currentTrack: track,
-            currentIndex: resolvedIndex,
-            isPlaying: false,
-            currentTime: 0,
-            duration: track.duration,
-            playbackMode: null,
-            playbackError: 'Full track unavailable for this selection. Only full YouTube-backed playback is supported.',
-          }));
-          return;
+        if (playableTrack.youtubeVideoId) {
+          console.log('🎵 Attempting YouTube playback...');
+          const started = await startYouTubeTrack(playableTrack, indexOverride);
+          if (started) {
+            console.log('🎵 YouTube playback started successfully');
+            return;
+          }
+          console.log('🎵 YouTube playback failed, falling back to preview');
         }
 
-        console.log('🎵 Attempting YouTube playback...');
-        const started = await startYouTubeTrack(playableTrack, indexOverride);
-        if (started) {
-          console.log('🎵 YouTube playback started successfully');
-          return;
-        }
-
-        console.warn('🎵 YouTube playback failed for:', playableTrack.youtubeVideoId);
-        updatePlayerState((prev) => ({
-          ...prev,
-          currentTrack: playableTrack,
-          currentIndex: resolvedIndex,
-          isPlaying: false,
-          currentTime: 0,
-          duration: playableTrack.duration,
-          playbackMode: null,
-          playbackError: 'Failed to start full track playback. Please try another track.',
-        }));
+        console.log('🎵 Starting preview audio playback...');
+        startAudioTrack(playableTrack, indexOverride);
       })();
     },
-    [resolveTrackForPlayback, startYouTubeTrack, updatePlayerState]
+    [resolveTrackForPlayback, startAudioTrack, startYouTubeTrack]
   );
 
   useEffect(() => {
