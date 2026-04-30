@@ -293,12 +293,17 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const resolveTrackForPlayback = useCallback(
     async (track: Track) => {
       if (track.youtubeVideoId) {
+        console.log('🎵 Track already has YouTube ID:', track.youtubeVideoId);
         return track;
       }
 
+      console.log('🎵 Resolving YouTube ID for:', track.title, 'by', track.artist);
       try {
         const { track: resolvedYouTubeTrack } = await api.resolveYouTubeTrack(track.title, track.artist);
+        console.log('🎵 YouTube API response:', resolvedYouTubeTrack);
+
         if (!resolvedYouTubeTrack?.youtubeVideoId) {
+          console.log('🎵 No YouTube ID found, using original track');
           return track;
         }
 
@@ -309,9 +314,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
 
         cacheResolvedTrack(mergedTrack);
+        console.log('🎵 Successfully resolved YouTube ID:', resolvedYouTubeTrack.youtubeVideoId);
         return mergedTrack;
       } catch (error) {
-        console.error('Failed to resolve YouTube track for playback:', error);
+        console.error('❌ Failed to resolve YouTube track for playback:', error);
         return track;
       }
     },
@@ -412,14 +418,22 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const startTrack = useCallback(
     (track: Track, indexOverride?: number) => {
+      console.log('🎵 Starting track:', track.title, 'by', track.artist);
       void (async () => {
         const playableTrack = await resolveTrackForPlayback(track);
+        console.log('🎵 Resolved track:', playableTrack.youtubeVideoId ? 'Has YouTube ID' : 'No YouTube ID');
 
         if (playableTrack.youtubeVideoId) {
+          console.log('🎵 Attempting YouTube playback...');
           const started = await startYouTubeTrack(playableTrack, indexOverride);
-          if (started) return;
+          if (started) {
+            console.log('🎵 YouTube playback started successfully');
+            return;
+          }
+          console.log('🎵 YouTube playback failed, falling back to audio');
         }
 
+        console.log('🎵 Starting audio playback...');
         startAudioTrack(playableTrack, indexOverride);
       })();
     },
