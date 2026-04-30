@@ -141,29 +141,35 @@ const scoreYouTubeMatch = ({ item, title, artist }) => {
 const resolveYouTubeTrack = async ({ title, artist }) => {
   const ytKey = process.env.YOUTUBE_API_KEY;
   if (!ytKey) {
-    console.warn('⚠️ YOUTUBE_API_KEY is not set in backend environment. YouTube resolution will fail.');
+    console.warn('⚠️ YOUTUBE_API_KEY is not set. YouTube resolution will fail.');
     return null;
   }
 
+  console.log(`📺 Resolving YouTube track: "${title}" by "${artist}"`);
   const queries = buildYouTubeQueries({ title, artist });
+  console.log(`📺 Built ${queries.length} search queries`);
 
   const fetchYouTubeResults = async (query, withCategory = true) => {
     let ytUrl =
       'https://www.googleapis.com/youtube/v3/search' +
-      `?part=snippet&type=video&maxResults=6&videoEmbeddable=true&q=${encodeURIComponent(query)}&key=${ytKey}`;
+      `?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(query)}&key=${ytKey}`;
 
     if (withCategory) {
       ytUrl += '&videoCategoryId=10';
     }
 
+    console.log(`📺 YouTube search: "${query}" (category=${withCategory})`);
     const response = await fetch(ytUrl);
     if (!response.ok) {
       const text = await response.text();
+      console.error(`❌ YouTube search failed for "${query}": ${response.status} ${text}`);
       throw new Error(`YouTube search failed: ${text}`);
     }
 
     const data = await response.json();
-    return Array.isArray(data.items) ? data.items : [];
+    const items = Array.isArray(data.items) ? data.items : [];
+    console.log(`  ✅ Got ${items.length} results for "${query}"`);
+    return items;
   };
 
   let candidates = [];
@@ -177,8 +183,11 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
   };
 
   candidates = await runSearch(true);
+  console.log(`📺 Round 1 (with category): ${candidates.length} candidates`);
   if (candidates.length === 0) {
+    console.log(`📺 Round 1 failed, trying without category...`);
     candidates = await runSearch(false);
+    console.log(`📺 Round 2 (no category): ${candidates.length} candidates`);
   }
 
   if (candidates.length === 0) {
@@ -186,12 +195,14 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
     return null;
   }
 
+  console.log(`📺 Scoring ${candidates.length} candidates for "${title}" by "${artist}"...`);
   const firstItem = candidates.sort((left, right) => {
     const rightScore = scoreYouTubeMatch({ item: right, title, artist });
     const leftScore = scoreYouTubeMatch({ item: left, title, artist });
     return rightScore - leftScore;
   })[0];
 
+  console.log(`✅ Selected: "${firstItem.snippet?.title}" (ID: ${firstItem.id.videoId})`);
   return {
     id: `${title}-${artist}`.toLowerCase().replace(/\s+/g, '-'),
     title,
