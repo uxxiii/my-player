@@ -138,16 +138,25 @@ const scoreYouTubeMatch = ({ item, title, artist }) => {
   return score;
 };
 
-const resolveYouTubeTrack = async ({ title, artist }) => {
+const resolveYouTubeTrack = async ({ title, artist, debug = false }) => {
   const ytKey = process.env.YOUTUBE_API_KEY;
   if (!ytKey) {
     console.warn('⚠️ YOUTUBE_API_KEY is not set. YouTube resolution will fail.');
-    return null;
+    return debug ? { track: null, debug: { error: 'YOUTUBE_API_KEY is not set' } } : null;
   }
 
   console.log(`📺 Resolving YouTube track: "${title}" by "${artist}"`);
   const queries = buildYouTubeQueries({ title, artist });
   console.log(`📺 Built ${queries.length} search queries:`, queries);
+
+  const debugInfo = debug
+    ? {
+        queries,
+        queryResults: [],
+        candidateCountByMode: { category: 0, all: 0 },
+        selected: null,
+      }
+    : null;
 
   const fetchYouTubeResults = async (query, withCategory = true) => {
     let ytUrl =
@@ -163,12 +172,18 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
     if (!response.ok) {
       const text = await response.text();
       console.error(`❌ YouTube search failed for "${query}": ${response.status} ${text}`);
+      if (debugInfo) {
+        debugInfo.queryResults.push({ query, withCategory, status: 'error', statusCode: response.status, error: text });
+      }
       throw new Error(`YouTube search failed: ${response.status} ${text}`);
     }
 
     const data = await response.json();
     const items = Array.isArray(data.items) ? data.items : [];
     const errorMessage = data.error?.message || null;
+    if (debugInfo) {
+      debugInfo.queryResults.push({ query, withCategory, status: 'ok', itemCount: items.length, errorMessage });
+    }
     if (errorMessage) {
       console.error(`❌ YouTube API responded with error for "${query}": ${errorMessage}`);
     }
@@ -184,9 +199,20 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
     const fulfilled = results.flatMap((result) => {
       if (result.status === 'fulfilled') return result.value;
       console.error(`  ❌ Query failed: ${result.reason}`);
+      if (debugInfo) {
+        debugInfo.queryResults.push({ query: 'unknown', withCategory, status: 'fetch_error', error: String(result.reason) });
+      }
       return [];
     });
-    return fulfilled.filter((item) => item?.id?.videoId);
+    const filtered = fulfilled.filter((item) => item?.id?.videoId);
+    if (debugInfo) {
+      if (withCategory) {
+        debugInfo.candidateCountByMode.category = filtered.length;
+      } else {
+        debugInfo.candidateCountByMode.all = filtered.length;
+      }
+    }
+    return filtered;
   };
 
   try {
@@ -200,7 +226,7 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
 
     if (candidates.length === 0) {
       console.warn('⚠️ YouTube resolution returned no candidates for', title, artist);
-      return null;
+      return debug ? { track: null, debug: debugInfo } : null;
     }
 
     console.log(`📺 Scoring ${candidates.length} candidates for "${title}" by "${artist}"...`);
@@ -211,7 +237,7 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
     })[0];
 
     console.log(`✅ Selected: "${firstItem.snippet?.title}" (ID: ${firstItem.id.videoId})`);
-    return {
+    const track = {
       id: `${title}-${artist}`.toLowerCase().replace(/\s+/g, '-'),
       title,
       artist,
@@ -223,8 +249,13 @@ const resolveYouTubeTrack = async ({ title, artist }) => {
         '',
       youtubeVideoId: firstItem.id.videoId,
     };
+    return debug ? { track, debug: debugInfo } : track;
   } catch (err) {
     console.error(`❌ YouTube resolution error: ${String(err)}`);
+    if (debugInfo) {
+      debugInfo.error = String(err);
+      return { track: null, debug: debugInfo };
+    }
     return null;
   }
 };
@@ -375,15 +406,20 @@ app.post('/api/resolve-youtube-track', async (req, res) => {
 
   console.log(`📡 POST /api/resolve-youtube-track: "${title}" by "${artist}"`);
   try {
-    const track = await resolveYouTubeTrack({ title, artist });
+    const result = await resolveYouTubeTrack({ title, artist, debug: true });
+    const track = result.track ?? null;
     if (track) {
       console.log(`✅ YouTube resolve succeeded: videoId=${track.youtubeVideoId}`);
-      res.json({ track, error: null });
+      res.json({ track, error: null, debug: result.debug });
       return;
     }
 
     console.warn(`❌ YouTube resolve failed: returned null`);
-    res.json({ track: null, error: 'YouTube resolution returned no candidates or failed.' });
+    res.json({
+      track: null,
+      error: 'YouTube resolution returned no candidates or failed.',
+      debug: result.debug,
+    });
   } catch (error) {
     console.error(`❌ YouTube resolve endpoint error: ${String(error)}`);
     res.status(500).json({ error: 'Failed to resolve YouTube track', details: String(error) });
