@@ -45,7 +45,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   resolveYouTubeTrack: (title: string, artist: string) =>
-    request<{ track: Track | null }>('/resolve-youtube-track', {
+    request<{ track: Track | null; error?: string }>('/resolve-youtube-track', {
       method: 'POST',
       body: JSON.stringify({ title, artist }),
     }),

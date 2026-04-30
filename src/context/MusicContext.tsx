@@ -299,11 +299,12 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       console.log('🎵 Resolving YouTube ID for:', track.title, 'by', track.artist);
       try {
-        const { track: resolvedYouTubeTrack } = await api.resolveYouTubeTrack(track.title, track.artist);
-        console.log('🎵 YouTube API response:', resolvedYouTubeTrack);
+        const response = await api.resolveYouTubeTrack(track.title, track.artist);
+        console.log('🎵 YouTube API response:', response);
+        const resolvedYouTubeTrack = response.track;
 
         if (!resolvedYouTubeTrack?.youtubeVideoId) {
-          console.log('🎵 No YouTube ID found, using original track');
+          console.warn('🎵 No YouTube ID found, backend error:', response.error ?? 'none');
           return track;
         }
 
