@@ -216,24 +216,25 @@ export const Home: React.FC = () => {
 
       {showPlaylistSections && (
         <section className="mb-12 min-w-0 max-w-full">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-4">
             {playlists.length > 0 ? (
               playlists.map((playlist) => (
                 <Link
                   key={playlist.id}
                   to={`/playlist/${playlist.id}`}
-                  className="group flex items-end overflow-hidden rounded-lg bg-dark-card transition-all hover:bg-dark-border h-32"
+                  className="group relative overflow-hidden rounded-lg bg-dark-card transition-all hover:bg-dark-border h-56"
                 >
                   {playlist.imageUrl && (
                     <img src={playlist.imageUrl} alt={playlist.name} className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   )}
-                  <div className="relative w-full px-4 pb-3 pt-16 bg-gradient-to-t from-black/80 to-transparent">
-                    <p className="font-bold text-white line-clamp-2">{playlist.name}</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="font-bold text-white text-sm line-clamp-2">{playlist.name}</p>
                   </div>
                 </Link>
               ))
             ) : (
-              <div className="md:col-span-2 lg:col-span-3 xl:col-span-4 rounded-lg border border-dashed border-dark-border bg-dark-card/70 px-5 py-10 text-center text-gray-400">
+              <div className="col-span-4 rounded-lg border border-dashed border-dark-border bg-dark-card/70 px-5 py-10 text-center text-gray-400">
                 Create a playlist to pin your favorite collections here.
               </div>
             )}
@@ -244,7 +245,7 @@ export const Home: React.FC = () => {
       {showMusicSections && (
         <>
           <section className="mb-12 min-w-0 max-w-full">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-white">It's New Music Friday!</h2>
               {jumpBackInTracks.length > 6 && (
                 <button
@@ -257,23 +258,30 @@ export const Home: React.FC = () => {
               )}
             </div>
             <HorizontalScroller>
-              {visibleJumpBackIn.map((track) => (
+              {visibleJumpBackIn.map((track, idx) => (
                 <button
                   key={`jump-${track.id}`}
                   type="button"
                   onClick={() => void playWithSmartQueue(track)}
-                  className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                  className="w-44 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                 >
-                  <div className="relative overflow-hidden h-40">
+                  <div className="relative overflow-hidden h-44">
                     <img 
                       src={track.imageUrl} 
                       alt={track.title} 
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                     />
+                    <div className={`absolute top-2 left-2 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold`}
+                      style={{
+                        backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A29BFE', '#74B9FF'][idx % 6]
+                      }}
+                    >
+                      {idx + 1}
+                    </div>
                   </div>
-                  <div className="p-3">
+                  <div className="p-4">
                     <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                    <p className="text-xs text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
                   </div>
                 </button>
               ))}
@@ -281,7 +289,7 @@ export const Home: React.FC = () => {
           </section>
 
           <section className="mb-12 min-w-0 max-w-full">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-white">Albums featuring songs you like</h2>
               {albumsYouLike.length > 8 && (
                 <button
@@ -294,23 +302,30 @@ export const Home: React.FC = () => {
               )}
             </div>
             <HorizontalScroller>
-              {visibleAlbumsYouLike.map((track) => (
+              {visibleAlbumsYouLike.map((track, idx) => (
                 <button
                   key={`album-${track.id}`}
                   type="button"
                   onClick={() => void playWithSmartQueue(track)}
-                  className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                  className="w-44 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                 >
-                  <div className="relative overflow-hidden h-40">
+                  <div className="relative overflow-hidden h-44">
                     <img 
                       src={track.imageUrl} 
                       alt={track.album} 
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                     />
+                    <div className={`absolute top-2 left-2 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold`}
+                      style={{
+                        backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A29BFE', '#74B9FF'][idx % 6]
+                      }}
+                    >
+                      🎵
+                    </div>
                   </div>
-                  <div className="p-3">
+                  <div className="p-4">
                     <p className="font-bold text-white text-sm line-clamp-2">{track.album}</p>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                    <p className="text-xs text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
                   </div>
                 </button>
               ))}
@@ -319,7 +334,7 @@ export const Home: React.FC = () => {
 
           {recentlyPlayedTracks.length > 0 && (
             <section className="mb-12 min-w-0 max-w-full">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Recently played</h2>
                 {recentlyPlayedTracks.length > 8 && (
                   <button
@@ -332,23 +347,30 @@ export const Home: React.FC = () => {
                 )}
               </div>
               <HorizontalScroller>
-                {visibleRecents.map((track) => (
+                {visibleRecents.map((track, idx) => (
                   <button
                     key={`recent-${track.id}`}
                     type="button"
                     onClick={() => void playWithSmartQueue(track)}
-                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                    className="w-44 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                   >
-                    <div className="relative overflow-hidden h-40">
+                    <div className="relative overflow-hidden h-44">
                       <img 
                         src={track.imageUrl} 
                         alt={track.title} 
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                       />
+                      <div className={`absolute top-2 left-2 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold`}
+                        style={{
+                          backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A29BFE', '#74B9FF'][idx % 6]
+                        }}
+                      >
+                        ▶
+                      </div>
                     </div>
-                    <div className="p-3">
+                    <div className="p-4">
                       <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                      <p className="text-xs text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
                     </div>
                   </button>
                 ))}
@@ -358,7 +380,7 @@ export const Home: React.FC = () => {
 
           {moreOfWhatYouLike.length > 0 && (
             <section className="mb-12 min-w-0 max-w-full">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">More of what you like</h2>
                 {moreOfWhatYouLike.length > 8 && (
                   <button
@@ -371,23 +393,30 @@ export const Home: React.FC = () => {
                 )}
               </div>
               <HorizontalScroller>
-                {visibleMoreOfWhatYouLike.map((track) => (
+                {visibleMoreOfWhatYouLike.map((track, idx) => (
                   <button
                     key={`more-${track.id}`}
                     type="button"
                     onClick={() => void playWithSmartQueue(track)}
-                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                    className="w-44 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                   >
-                    <div className="relative overflow-hidden h-40">
+                    <div className="relative overflow-hidden h-44">
                       <img 
                         src={track.imageUrl} 
                         alt={track.title} 
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                       />
+                      <div className={`absolute top-2 left-2 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold`}
+                        style={{
+                          backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A29BFE', '#74B9FF'][idx % 6]
+                        }}
+                      >
+                        ♥
+                      </div>
                     </div>
-                    <div className="p-3">
+                    <div className="p-4">
                       <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                      <p className="text-xs text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
                     </div>
                   </button>
                 ))}
@@ -397,7 +426,7 @@ export const Home: React.FC = () => {
 
           {basedOnRecentListening.length > 0 && (
             <section className="mb-12 min-w-0 max-w-full">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Based on your recent listening</h2>
                 {basedOnRecentListening.length > 8 && (
                   <button
@@ -410,23 +439,30 @@ export const Home: React.FC = () => {
                 )}
               </div>
               <HorizontalScroller>
-                {visibleBasedOnRecent.map((track) => (
+                {visibleBasedOnRecent.map((track, idx) => (
                   <button
                     key={`based-${track.id}`}
                     type="button"
                     onClick={() => void playWithSmartQueue(track)}
-                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                    className="w-44 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                   >
-                    <div className="relative overflow-hidden h-40">
+                    <div className="relative overflow-hidden h-44">
                       <img 
                         src={track.imageUrl} 
                         alt={track.title} 
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                       />
+                      <div className={`absolute top-2 left-2 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold`}
+                        style={{
+                          backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A29BFE', '#74B9FF'][idx % 6]
+                        }}
+                      >
+                        📻
+                      </div>
                     </div>
-                    <div className="p-3">
+                    <div className="p-4">
                       <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                      <p className="text-xs text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
                     </div>
                   </button>
                 ))}
@@ -435,7 +471,7 @@ export const Home: React.FC = () => {
           )}
 
           <section className="mb-12">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-white">Today's biggest hits</h2>
               {todaysBiggestHits.length > 8 && (
                 <button
@@ -451,23 +487,30 @@ export const Home: React.FC = () => {
               <p className="text-sm text-gray-400">Loading today's biggest hits...</p>
             ) : (
               <HorizontalScroller>
-                {visibleHits.map((track) => (
+                {visibleHits.map((track, idx) => (
                   <button
                     key={`hit-${track.id}`}
                     type="button"
                     onClick={() => void playWithSmartQueue(track)}
-                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                    className="w-44 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                   >
-                    <div className="relative overflow-hidden h-40">
+                    <div className="relative overflow-hidden h-44">
                       <img 
                         src={track.imageUrl} 
                         alt={track.title} 
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                       />
+                      <div className={`absolute top-2 left-2 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold`}
+                        style={{
+                          backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A29BFE', '#74B9FF'][idx % 6]
+                        }}
+                      >
+                        ⭐
+                      </div>
                     </div>
-                    <div className="p-3">
+                    <div className="p-4">
                       <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                      <p className="text-xs text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
                     </div>
                   </button>
                 ))}
