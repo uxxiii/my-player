@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Search, Settings, UserCircle, LogOut, Menu } from 'lucide-react';
+import { Home, Search, Settings, UserCircle, LogOut, Menu } from 'lucide-react';
 import { useMusic } from '../context/MusicContext';
 
 interface TopBarProps {
@@ -38,18 +38,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
 
       <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           className="h-10 w-10 rounded-full bg-dark-bg border border-dark-border text-gray-300 hover:text-white hover:bg-dark-border transition-colors flex items-center justify-center flex-shrink-0"
-          title="Go back"
+          title="Go to Home"
         >
-          <ChevronLeft size={20} />
-        </button>
-        <button
-          onClick={() => navigate(1)}
-          className="h-10 w-10 rounded-full bg-dark-bg border border-dark-border text-gray-300 hover:text-white hover:bg-dark-border transition-colors flex items-center justify-center flex-shrink-0"
-          title="Go forward"
-        >
-          <ChevronRight size={20} />
+          <Home size={20} />
         </button>
 
         <form key={location.search} onSubmit={handleSearchSubmit} className="flex-1 max-w-xl relative">
