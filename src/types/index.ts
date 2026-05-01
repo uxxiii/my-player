@@ -24,6 +24,7 @@ export interface Playlist {
   description?: string;
   tracks: Track[];
   imageUrl?: string;
+  ownerId?: string;
   createdAt: Date | string;
 }
 

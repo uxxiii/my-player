@@ -902,15 +902,26 @@ app.post('/api/track-overrides/manual-youtube', async (req, res) => {
   res.status(201).json({ track: materializeTrackOverride(override, baseUrl) });
 });
 
-app.get('/api/playlists', async (_req, res) => {
+app.get('/api/playlists', async (req, res) => {
+  const userId = req.query.userId ? String(req.query.userId) : null;
   const playlists = await getPlaylists();
-  res.json({ playlists });
+  
+  // If userId is provided, filter to only that user's playlists
+  // Otherwise return all playlists (for backward compatibility)
+  const filtered = userId
+    ? playlists.filter((p) => p.ownerId === userId)
+    : playlists;
+  
+  res.json({ playlists: filtered });
 });
 
 app.post('/api/playlists', async (req, res) => {
-  const { name, description, imageUrl } = req.body ?? {};
+  const { name, description, imageUrl, userId } = req.body ?? {};
   if (!name) {
     return res.status(400).json({ error: 'Missing playlist name' });
+  }
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId' });
   }
 
   const playlists = await getPlaylists();
@@ -920,6 +931,7 @@ app.post('/api/playlists', async (req, res) => {
     description: description || '',
     imageUrl: imageUrl || '',
     tracks: [],
+    ownerId: userId,
     createdAt: new Date().toISOString(),
   };
 

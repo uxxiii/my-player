@@ -559,7 +559,12 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const loadPlaylists = async () => {
       try {
-        const { playlists: fromApi } = await api.getPlaylists();
+        // Only load playlists if user is authenticated
+        if (!user?.id) {
+          setPlaylists([]);
+          return;
+        }
+        const { playlists: fromApi } = await api.getPlaylists(user.id);
         setPlaylists(fromApi.length > 0 ? fromApi : []);
       } catch (error) {
         console.error('Failed to load playlists from API:', error);
@@ -568,7 +573,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     void loadPlaylists();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     return () => {
@@ -651,7 +656,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [updatePlayerState]);
 
   const createPlaylist = async (name: string, description?: string, imageUrl?: string) => {
-    const { playlist } = await api.createPlaylist({ name, description, imageUrl });
+    if (!user?.id) {
+      throw new Error('Must be logged in to create playlists');
+    }
+    const { playlist } = await api.createPlaylist({ name, description, imageUrl, userId: user.id });
     setPlaylists((prev) => [...prev, playlist]);
     return playlist;
   };

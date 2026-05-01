@@ -58,8 +58,11 @@ export const api = {
       }),
     }),
 
-  getPlaylists: () => request<{ playlists: Playlist[] }>('/playlists'),
-  createPlaylist: (payload: { name: string; description?: string; imageUrl?: string }) =>
+  getPlaylists: (userId?: string) => {
+    const url = userId ? `/playlists?userId=${encodeURIComponent(userId)}` : '/playlists';
+    return request<{ playlists: Playlist[] }>(url);
+  },
+  createPlaylist: (payload: { name: string; description?: string; imageUrl?: string; userId?: string }) =>
     request<{ playlist: Playlist }>('/playlists', {
       method: 'POST',
       body: JSON.stringify(payload),
