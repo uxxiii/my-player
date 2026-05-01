@@ -904,13 +904,14 @@ app.post('/api/track-overrides/manual-youtube', async (req, res) => {
 
 app.get('/api/playlists', async (req, res) => {
   const userId = req.query.userId ? String(req.query.userId) : null;
-  const playlists = await getPlaylists();
   
-  // If userId is provided, filter to only that user's playlists
-  // Otherwise return all playlists (for backward compatibility)
-  const filtered = userId
-    ? playlists.filter((p) => p.ownerId === userId)
-    : playlists;
+  // userId is required - users can only see their own playlists
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId query parameter' });
+  }
+  
+  const playlists = await getPlaylists();
+  const filtered = playlists.filter((p) => p.ownerId === userId);
   
   res.json({ playlists: filtered });
 });
