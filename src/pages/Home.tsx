@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMusic } from '../context/MusicContext';
 import type { Track } from '../types';
 import { api } from '../lib/api';
-import { buildSmartQueue, loadPersonalizedRecommendations } from '../lib/discovery';
+import { buildSmartQueue } from '../lib/discovery';
 
 type HomeFilter = 'all' | 'music' | 'podcasts';
 
@@ -17,7 +17,6 @@ const HorizontalScroller: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const Home: React.FC = () => {
   const [trendingTracks, setTrendingTracks] = useState<Track[]>([]);
-  const [recommendedTracks, setRecommendedTracks] = useState<Track[]>([]);
   const [activeFilter, setActiveFilter] = useState<HomeFilter>('all');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const {
@@ -40,22 +39,6 @@ export const Home: React.FC = () => {
     };
     void load();
   }, []);
-
-  useEffect(() => {
-    const loadRecommendations = async () => {
-      try {
-        const tracks = await loadPersonalizedRecommendations({
-          recentScrobbles,
-          likedTracks,
-          fallbackArtist: playerState.currentTrack?.artist || trendingTracks[0]?.artist,
-        });
-        setRecommendedTracks(tracks.slice(0, 24));
-      } catch (error) {
-        console.error('Failed to load recommendations:', error);
-      }
-    };
-    void loadRecommendations();
-  }, [likedTracks, playerState.currentTrack?.artist, recentScrobbles, trendingTracks]);
 
   const recentlyPlayedTracks = useMemo(() => {
     const seen = new Set<string>();
