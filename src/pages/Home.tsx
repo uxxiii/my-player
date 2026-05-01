@@ -141,30 +141,6 @@ export const Home: React.FC = () => {
         ))}
       </div>
 
-  return (
-    <div className="main-content min-w-0 max-w-full overflow-x-hidden p-6">
-      <div className="mb-8 flex flex-wrap gap-3">
-        {([
-          ['all', 'All'],
-          ['music', 'Music'],
-          ['playlists', 'Playlists'],
-          ['podcasts', 'Podcasts'],
-        ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setActiveFilter(value)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-              activeFilter === value
-                ? 'bg-white text-slate-900'
-                : 'bg-dark-card text-gray-300 hover:bg-dark-border hover:text-white'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       {showPlaylistSections && (
         <section className="mb-12 min-w-0 max-w-full">
           <div className="grid gap-4 grid-cols-4">
