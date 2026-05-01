@@ -1,6 +1,6 @@
 import React from 'react';
-import { Heart, ListMusic, Music, PanelLeft, Plus } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { Heart, ListMusic, ChevronLeft, ChevronRight, PanelLeft, Plus } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useMusic } from '../context/MusicContext';
 
 interface NavigationProps {
@@ -15,6 +15,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenCreatePlaylist,
 }) => {
   const { playlists } = useMusic();
+  const navigate = useNavigate();
   const railItemClassName = 'h-12 w-12 rounded-[0.95rem]';
   const coverClassName = isCollapsed ? 'h-full w-full rounded-[0.72rem] object-cover' : 'h-10 w-10 rounded-[0.72rem] object-cover';
 
@@ -22,16 +23,21 @@ export const Navigation: React.FC<NavigationProps> = ({
     <div className="sidebar">
       <div className={`border-b border-dark-border ${isCollapsed ? 'px-3 py-4' : 'p-5'}`}>
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between gap-3'}`}>
-          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-            <div className="flex h-11 w-11 items-center justify-center rounded-[1rem] bg-blue-primary/15 text-blue-primary">
-              <Music size={24} />
-            </div>
-            {!isCollapsed && (
-              <div>
-                <h1 className="text-2xl font-bold text-blue-primary">MyPlayer</h1>
-                <p className="text-xs text-gray-500">Your collection</p>
-              </div>
-            )}
+          <div className={`flex items-center ${isCollapsed ? 'justify-center gap-2' : 'gap-2'}`}>
+            <button
+              onClick={() => navigate(-1)}
+              className="h-10 w-10 rounded-lg bg-dark-bg border border-dark-border text-gray-300 hover:text-white hover:bg-dark-border transition-colors flex items-center justify-center flex-shrink-0"
+              title="Go back"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={() => navigate(1)}
+              className="h-10 w-10 rounded-lg bg-dark-bg border border-dark-border text-gray-300 hover:text-white hover:bg-dark-border transition-colors flex items-center justify-center flex-shrink-0"
+              title="Go forward"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
 
           {onToggleCollapse && !isCollapsed && (
