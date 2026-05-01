@@ -942,12 +942,22 @@ app.post('/api/playlists', async (req, res) => {
 
 app.patch('/api/playlists/:playlistId', async (req, res) => {
   const { playlistId } = req.params;
-  const updates = req.body ?? {};
+  const { userId, ...updates } = req.body ?? {};
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId' });
+  }
+  
   const playlists = await getPlaylists();
   const idx = playlists.findIndex((playlist) => playlist.id === playlistId);
 
   if (idx < 0) {
     return res.status(404).json({ error: 'Playlist not found' });
+  }
+  
+  // Check ownership
+  if (playlists[idx].ownerId !== userId) {
+    return res.status(403).json({ error: 'You can only edit your own playlists' });
   }
 
   playlists[idx] = {
@@ -963,7 +973,24 @@ app.patch('/api/playlists/:playlistId', async (req, res) => {
 
 app.delete('/api/playlists/:playlistId', async (req, res) => {
   const { playlistId } = req.params;
+  const { userId } = req.body ?? {};
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId' });
+  }
+  
   const playlists = await getPlaylists();
+  const idx = playlists.findIndex((playlist) => playlist.id === playlistId);
+  
+  if (idx < 0) {
+    return res.status(404).json({ error: 'Playlist not found' });
+  }
+  
+  // Check ownership
+  if (playlists[idx].ownerId !== userId) {
+    return res.status(403).json({ error: 'You can only delete your own playlists' });
+  }
+  
   const next = playlists.filter((playlist) => playlist.id !== playlistId);
   await savePlaylists(next);
   res.status(204).send();
@@ -971,10 +998,14 @@ app.delete('/api/playlists/:playlistId', async (req, res) => {
 
 app.post('/api/playlists/:playlistId/tracks', async (req, res) => {
   const { playlistId } = req.params;
-  const { track } = req.body ?? {};
+  const { track, userId } = req.body ?? {};
 
   if (!track?.id) {
     return res.status(400).json({ error: 'Missing track payload' });
+  }
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId' });
   }
 
   const playlists = await getPlaylists();
@@ -982,6 +1013,11 @@ app.post('/api/playlists/:playlistId/tracks', async (req, res) => {
 
   if (idx < 0) {
     return res.status(404).json({ error: 'Playlist not found' });
+  }
+  
+  // Check ownership
+  if (playlists[idx].ownerId !== userId) {
+    return res.status(403).json({ error: 'You can only add tracks to your own playlists' });
   }
 
   const exists = playlists[idx].tracks.some((item) => item.id === track.id);
@@ -995,11 +1031,22 @@ app.post('/api/playlists/:playlistId/tracks', async (req, res) => {
 
 app.delete('/api/playlists/:playlistId/tracks/:trackId', async (req, res) => {
   const { playlistId, trackId } = req.params;
+  const { userId } = req.body ?? {};
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId' });
+  }
+  
   const playlists = await getPlaylists();
   const idx = playlists.findIndex((playlist) => playlist.id === playlistId);
 
   if (idx < 0) {
     return res.status(404).json({ error: 'Playlist not found' });
+  }
+  
+  // Check ownership
+  if (playlists[idx].ownerId !== userId) {
+    return res.status(403).json({ error: 'You can only remove tracks from your own playlists' });
   }
 
   playlists[idx].tracks = playlists[idx].tracks.filter((track) => track.id !== trackId);

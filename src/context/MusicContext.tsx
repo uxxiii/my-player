@@ -668,22 +668,34 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     id: string,
     updates: Partial<Pick<Playlist, 'name' | 'description' | 'imageUrl'>>
   ) => {
-    const { playlist } = await api.updatePlaylist(id, updates);
+    if (!user?.id) {
+      throw new Error('Must be logged in to update playlists');
+    }
+    const { playlist } = await api.updatePlaylist(id, updates, user.id);
     setPlaylists((prev) => prev.map((item) => (item.id === id ? playlist : item)));
   };
 
   const deletePlaylist = async (id: string) => {
-    await api.deletePlaylist(id);
+    if (!user?.id) {
+      throw new Error('Must be logged in to delete playlists');
+    }
+    await api.deletePlaylist(id, user.id);
     setPlaylists((prev) => prev.filter((item) => item.id !== id));
   };
 
   const addTrackToPlaylist = async (playlistId: string, track: Track) => {
-    const { playlist } = await api.addTrackToPlaylist(playlistId, track);
+    if (!user?.id) {
+      throw new Error('Must be logged in to add tracks');
+    }
+    const { playlist } = await api.addTrackToPlaylist(playlistId, track, user.id);
     setPlaylists((prev) => prev.map((item) => (item.id === playlistId ? playlist : item)));
   };
 
   const removeTrackFromPlaylist = async (playlistId: string, trackId: string) => {
-    const { playlist } = await api.removeTrackFromPlaylist(playlistId, trackId);
+    if (!user?.id) {
+      throw new Error('Must be logged in to remove tracks');
+    }
+    const { playlist } = await api.removeTrackFromPlaylist(playlistId, trackId, user.id);
     setPlaylists((prev) => prev.map((item) => (item.id === playlistId ? playlist : item)));
   };
 

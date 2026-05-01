@@ -69,24 +69,27 @@ export const api = {
     }),
   updatePlaylist: (
     playlistId: string,
-    payload: Partial<Pick<Playlist, 'name' | 'description' | 'imageUrl'>>
+    payload: Partial<Pick<Playlist, 'name' | 'description' | 'imageUrl'>>,
+    userId?: string
   ) =>
     request<{ playlist: Playlist }>(`/playlists/${playlistId}`, {
       method: 'PATCH',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, userId }),
     }),
-  deletePlaylist: (playlistId: string) =>
+  deletePlaylist: (playlistId: string, userId?: string) =>
     request<void>(`/playlists/${playlistId}`, {
       method: 'DELETE',
+      body: JSON.stringify({ userId }),
     }),
-  addTrackToPlaylist: (playlistId: string, track: Track) =>
+  addTrackToPlaylist: (playlistId: string, track: Track, userId?: string) =>
     request<{ playlist: Playlist }>(`/playlists/${playlistId}/tracks`, {
       method: 'POST',
-      body: JSON.stringify({ track }),
+      body: JSON.stringify({ track, userId }),
     }),
-  removeTrackFromPlaylist: (playlistId: string, trackId: string) =>
+  removeTrackFromPlaylist: (playlistId: string, trackId: string, userId?: string) =>
     request<{ playlist: Playlist }>(`/playlists/${playlistId}/tracks/${trackId}`, {
       method: 'DELETE',
+      body: JSON.stringify({ userId }),
     }),
 
   getLyrics: (artist: string, title: string) =>
