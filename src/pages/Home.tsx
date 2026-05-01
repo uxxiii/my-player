@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMusic } from '../context/MusicContext';
 import type { Track } from '../types';
-import { api } from '../lib/api';
 import { buildSmartQueue } from '../lib/discovery';
 
 type HomeFilter = 'all' | 'music' | 'podcasts';
@@ -16,7 +15,6 @@ const HorizontalScroller: React.FC<{ children: React.ReactNode }> = ({ children 
 );
 
 export const Home: React.FC = () => {
-  const [trendingTracks, setTrendingTracks] = useState<Track[]>([]);
   const [activeFilter, setActiveFilter] = useState<HomeFilter>('all');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const {
@@ -24,21 +22,8 @@ export const Home: React.FC = () => {
     setQueue,
     likedTracks,
     playlists,
-    playerState,
     recentScrobbles,
   } = useMusic();
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { tracks } = await api.getTrendingTracks();
-        setTrendingTracks(tracks);
-      } catch (error) {
-        console.error('Failed to load trending:', error);
-      }
-    };
-    void load();
-  }, []);
 
   const recentlyPlayedTracks = useMemo(() => {
     const seen = new Set<string>();
