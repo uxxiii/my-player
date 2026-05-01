@@ -18,7 +18,6 @@ const HorizontalScroller: React.FC<{ children: React.ReactNode }> = ({ children 
 export const Home: React.FC = () => {
   const [trendingTracks, setTrendingTracks] = useState<Track[]>([]);
   const [recommendedTracks, setRecommendedTracks] = useState<Track[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<HomeFilter>('all');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const {
@@ -35,8 +34,8 @@ export const Home: React.FC = () => {
       try {
         const { tracks } = await api.getTrendingTracks();
         setTrendingTracks(tracks);
-      } finally {
-        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load trending:', error);
       }
     };
     void load();
@@ -55,25 +54,8 @@ export const Home: React.FC = () => {
         console.error('Failed to load recommendations:', error);
       }
     };
-
     void loadRecommendations();
   }, [likedTracks, playerState.currentTrack?.artist, recentScrobbles, trendingTracks]);
-
-  const toggleExpanded = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const playWithSmartQueue = async (track: Track, excludedTrackIds: string[] = []) => {
-    const queue = await buildSmartQueue({
-      focusedTrack: track,
-      recentScrobbles,
-      likedTracks,
-      excludedTrackIds,
-    });
-
-    setQueue(queue);
-    playTrack(track);
-  };
 
   const recentlyPlayedTracks = useMemo(() => {
     const seen = new Set<string>();
@@ -91,7 +73,6 @@ export const Home: React.FC = () => {
   const albumsYouLike = useMemo(() => {
     const source = likedTracks.length > 0 ? likedTracks : recentlyPlayedTracks;
     const seen = new Set<string>();
-
     return source.filter((track) => {
       const key = `${track.album}:${track.artist}`;
       if (seen.has(key)) return false;
@@ -99,20 +80,6 @@ export const Home: React.FC = () => {
       return true;
     });
   }, [likedTracks, recentlyPlayedTracks]);
-
-  const moreOfWhatYouLike = useMemo(() => recommendedTracks.slice(0, 10), [recommendedTracks]);
-  const basedOnRecentListening = useMemo(
-    () => recommendedTracks.slice(10, 20).concat(trendingTracks).slice(0, 10),
-    [recommendedTracks, trendingTracks]
-  );
-  const todaysBiggestHits = useMemo(() => trendingTracks.slice(0, 10), [trendingTracks]);
-
-  const visibleJumpBackIn = expandedSections.jumpBackIn ? jumpBackInTracks : jumpBackInTracks.slice(0, 6);
-  const visibleAlbumsYouLike = expandedSections.albums ? albumsYouLike : albumsYouLike.slice(0, 8);
-  const visibleRecents = expandedSections.recents ? recentlyPlayedTracks : recentlyPlayedTracks.slice(0, 8);
-  const visibleMoreOfWhatYouLike = expandedSections.moreLike ? moreOfWhatYouLike : moreOfWhatYouLike.slice(0, 8);
-  const visibleBasedOnRecent = expandedSections.basedOnRecent ? basedOnRecentListening : basedOnRecentListening.slice(0, 8);
-  const visibleHits = expandedSections.hits ? todaysBiggestHits : todaysBiggestHits.slice(0, 8);
 
   const showPlaylistSections = activeFilter !== 'music';
   const showMusicSections = activeFilter !== 'podcasts';
