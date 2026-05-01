@@ -1,4 +1,5 @@
 import { BrowserRouter as Router } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { MusicProvider } from './context/MusicContext';
 import { AuthGuard } from './components/ProtectedRoute';
 
@@ -8,6 +9,7 @@ function App() {
       <Router>
         <AuthGuard />
       </Router>
+      <Analytics />
     </MusicProvider>
   );
 }
