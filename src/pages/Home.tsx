@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Disc3, Heart, Radio, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMusic } from '../context/MusicContext';
 import type { Track } from '../types';
@@ -7,33 +6,6 @@ import { api } from '../lib/api';
 import { buildSmartQueue, loadPersonalizedRecommendations } from '../lib/discovery';
 
 type HomeFilter = 'all' | 'music' | 'playlists' | 'podcasts';
-
-const SectionHeader: React.FC<{
-  title: string;
-  subtitle?: string;
-  accentIcon?: React.ReactNode;
-  onShowAll?: () => void;
-  showAllLabel?: string;
-}> = ({ title, subtitle, accentIcon, onShowAll, showAllLabel = 'Show all' }) => (
-  <div className="mb-6 flex items-center justify-between gap-4">
-    <div className="flex items-start gap-3">
-      {accentIcon}
-      <div>
-        <h2 className="text-3xl font-bold text-white">{title}</h2>
-        {subtitle && <p className="mt-1 text-sm text-gray-400">{subtitle}</p>}
-      </div>
-    </div>
-    {onShowAll && (
-      <button
-        type="button"
-        onClick={onShowAll}
-        className="text-sm font-semibold text-gray-400 transition-colors hover:text-white whitespace-nowrap"
-      >
-        {showAllLabel}
-      </button>
-    )}
-  </div>
-);
 
 const HorizontalScroller: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -218,197 +190,263 @@ export const Home: React.FC = () => {
         </section>
       )}
 
+  return (
+    <div className="main-content min-w-0 max-w-full overflow-x-hidden p-6">
+      <div className="mb-8 flex flex-wrap gap-3">
+        {([
+          ['all', 'All'],
+          ['music', 'Music'],
+          ['playlists', 'Playlists'],
+          ['podcasts', 'Podcasts'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setActiveFilter(value)}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              activeFilter === value
+                ? 'bg-white text-slate-900'
+                : 'bg-dark-card text-gray-300 hover:bg-dark-border hover:text-white'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {showPlaylistSections && (
+        <section className="mb-12 min-w-0 max-w-full">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {playlists.length > 0 ? (
+              playlists.map((playlist) => (
+                <Link
+                  key={playlist.id}
+                  to={`/playlist/${playlist.id}`}
+                  className="group flex items-end overflow-hidden rounded-lg bg-dark-card transition-all hover:bg-dark-border h-32"
+                >
+                  {playlist.imageUrl && (
+                    <img src={playlist.imageUrl} alt={playlist.name} className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  )}
+                  <div className="relative w-full px-4 pb-3 pt-16 bg-gradient-to-t from-black/80 to-transparent">
+                    <p className="font-bold text-white line-clamp-2">{playlist.name}</p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="md:col-span-2 lg:col-span-3 xl:col-span-4 rounded-lg border border-dashed border-dark-border bg-dark-card/70 px-5 py-10 text-center text-gray-400">
+                Create a playlist to pin your favorite collections here.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {showMusicSections && (
         <>
-          <section className="mb-16 min-w-0 max-w-full">
-            <SectionHeader
-              title="It's New Music Friday!"
-              subtitle="Fresh tracks from your favorite artists"
-              accentIcon={<Sparkles size={28} className="text-yellow-400 mt-1" />}
-              onShowAll={() => toggleExpanded('jumpBackIn')}
-            />
+          <section className="mb-12 min-w-0 max-w-full">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">It's New Music Friday!</h2>
+              {jumpBackInTracks.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded('jumpBackIn')}
+                  className="text-sm font-semibold text-gray-400 transition-colors hover:text-white"
+                >
+                  Show all
+                </button>
+              )}
+            </div>
             <HorizontalScroller>
               {visibleJumpBackIn.map((track) => (
                 <button
                   key={`jump-${track.id}`}
                   type="button"
                   onClick={() => void playWithSmartQueue(track)}
-                  className="w-48 shrink-0 overflow-hidden rounded-lg bg-dark-card/60 backdrop-blur-sm border border-dark-border/50 text-left transition-all hover:bg-dark-card hover:border-dark-border group"
+                  className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                 >
-                  <div className="relative overflow-hidden bg-dark-border">
+                  <div className="relative overflow-hidden h-40">
                     <img 
                       src={track.imageUrl} 
                       alt={track.title} 
-                      className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                     />
                   </div>
-                  <div className="p-4">
-                    <p className="font-bold text-white line-clamp-2">{track.title}</p>
-                    <p className="text-sm text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
+                  <div className="p-3">
+                    <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
                   </div>
                 </button>
               ))}
             </HorizontalScroller>
           </section>
 
-          <section className="mb-16 min-w-0 max-w-full">
-            <SectionHeader
-              title="Albums Featuring Songs You Like"
-              accentIcon={<Heart size={28} className="text-red-400 mt-1" />}
-              onShowAll={() => toggleExpanded('albums')}
-            />
+          <section className="mb-12 min-w-0 max-w-full">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">Albums featuring songs you like</h2>
+              {albumsYouLike.length > 8 && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded('albums')}
+                  className="text-sm font-semibold text-gray-400 transition-colors hover:text-white"
+                >
+                  Show all
+                </button>
+              )}
+            </div>
             <HorizontalScroller>
               {visibleAlbumsYouLike.map((track) => (
                 <button
                   key={`album-${track.id}`}
                   type="button"
                   onClick={() => void playWithSmartQueue(track)}
-                  className="w-48 shrink-0 overflow-hidden rounded-lg bg-dark-card/60 backdrop-blur-sm border border-dark-border/50 text-left transition-all hover:bg-dark-card hover:border-dark-border group"
+                  className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                 >
-                  <div className="relative overflow-hidden bg-dark-border">
+                  <div className="relative overflow-hidden h-40">
                     <img 
                       src={track.imageUrl} 
                       alt={track.album} 
-                      className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                    />
-                  </div>
-                  <div className="p-4">
-                    <p className="font-bold text-white line-clamp-2">{track.album}</p>
-                    <p className="text-sm text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
-                  </div>
-                </button>
-              ))}
-            </HorizontalScroller>
-          </section>
-
-          <section className="mb-16 min-w-0 max-w-full">
-            <SectionHeader
-              title="Recently Played"
-              accentIcon={<Radio size={28} className="text-purple-400 mt-1" />}
-              onShowAll={() => toggleExpanded('recents')}
-            />
-            <HorizontalScroller>
-              {visibleRecents.map((track) => (
-                <button
-                  key={`recent-${track.id}`}
-                  type="button"
-                  onClick={() => void playWithSmartQueue(track)}
-                  className="w-48 shrink-0 overflow-hidden rounded-lg bg-dark-card/60 backdrop-blur-sm border border-dark-border/50 text-left transition-all hover:bg-dark-card hover:border-dark-border group"
-                >
-                  <div className="relative overflow-hidden bg-dark-border">
-                    <img 
-                      src={track.imageUrl} 
-                      alt={track.title} 
-                      className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                    />
-                  </div>
-                  <div className="p-4">
-                    <p className="font-bold text-white line-clamp-2">{track.title}</p>
-                    <p className="text-sm text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
-                  </div>
-                </button>
-              ))}
-            </HorizontalScroller>
-          </section>
-
-          <section className="mb-16 min-w-0 max-w-full">
-            <SectionHeader
-              title="Your Top Artists"
-              accentIcon={<Sparkles size={28} className="text-cyan-400 mt-1" />}
-              onShowAll={() => toggleExpanded('topArtists')}
-            />
-            <HorizontalScroller>
-              {visibleTopArtists.map((artist, index) => (
-                <div
-                  key={artist.artist}
-                  className="relative w-48 shrink-0 rounded-lg overflow-hidden bg-dark-card/60 backdrop-blur-sm border border-dark-border/50 hover:bg-dark-card hover:border-dark-border transition-all group"
-                >
-                  <div className="relative overflow-hidden h-48">
-                    <img 
-                      src={artist.imageUrl} 
-                      alt={artist.artist} 
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
-                      <div className="text-6xl font-black text-white/90 drop-shadow-lg leading-none">
-                        {index + 1}
-                      </div>
+                  </div>
+                  <div className="p-3">
+                    <p className="font-bold text-white text-sm line-clamp-2">{track.album}</p>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                  </div>
+                </button>
+              ))}
+            </HorizontalScroller>
+          </section>
+
+          {recentlyPlayedTracks.length > 0 && (
+            <section className="mb-12 min-w-0 max-w-full">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">Recently played</h2>
+                {recentlyPlayedTracks.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded('recents')}
+                    className="text-sm font-semibold text-gray-400 transition-colors hover:text-white"
+                  >
+                    Show all
+                  </button>
+                )}
+              </div>
+              <HorizontalScroller>
+                {visibleRecents.map((track) => (
+                  <button
+                    key={`recent-${track.id}`}
+                    type="button"
+                    onClick={() => void playWithSmartQueue(track)}
+                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                  >
+                    <div className="relative overflow-hidden h-40">
+                      <img 
+                        src={track.imageUrl} 
+                        alt={track.title} 
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      />
                     </div>
-                  </div>
-                  <div className="p-4">
-                    <p className="font-bold text-white line-clamp-2">{artist.artist}</p>
-                  </div>
-                </div>
-              ))}
-            </HorizontalScroller>
-          </section>
+                    <div className="p-3">
+                      <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                    </div>
+                  </button>
+                ))}
+              </HorizontalScroller>
+            </section>
+          )}
 
-          <section className="mb-16 min-w-0 max-w-full">
-            <SectionHeader
-              title="More Of What You Like"
-              accentIcon={<Sparkles size={28} className="text-green-400 mt-1" />}
-              onShowAll={() => toggleExpanded('moreLike')}
-            />
-            <HorizontalScroller>
-              {visibleMoreOfWhatYouLike.map((track) => (
-                <button
-                  key={`more-${track.id}`}
-                  type="button"
-                  onClick={() => void playWithSmartQueue(track)}
-                  className="w-48 shrink-0 overflow-hidden rounded-lg bg-dark-card/60 backdrop-blur-sm border border-dark-border/50 text-left transition-all hover:bg-dark-card hover:border-dark-border group"
-                >
-                  <div className="relative overflow-hidden bg-dark-border">
-                    <img 
-                      src={track.imageUrl} 
-                      alt={track.title} 
-                      className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                    />
-                  </div>
-                  <div className="p-4">
-                    <p className="font-bold text-white line-clamp-2">{track.title}</p>
-                    <p className="text-sm text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
-                  </div>
-                </button>
-              ))}
-            </HorizontalScroller>
-          </section>
+          {moreOfWhatYouLike.length > 0 && (
+            <section className="mb-12 min-w-0 max-w-full">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">More of what you like</h2>
+                {moreOfWhatYouLike.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded('moreLike')}
+                    className="text-sm font-semibold text-gray-400 transition-colors hover:text-white"
+                  >
+                    Show all
+                  </button>
+                )}
+              </div>
+              <HorizontalScroller>
+                {visibleMoreOfWhatYouLike.map((track) => (
+                  <button
+                    key={`more-${track.id}`}
+                    type="button"
+                    onClick={() => void playWithSmartQueue(track)}
+                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                  >
+                    <div className="relative overflow-hidden h-40">
+                      <img 
+                        src={track.imageUrl} 
+                        alt={track.title} 
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      />
+                    </div>
+                    <div className="p-3">
+                      <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                    </div>
+                  </button>
+                ))}
+              </HorizontalScroller>
+            </section>
+          )}
 
-          <section className="mb-16 min-w-0 max-w-full">
-            <SectionHeader
-              title="Based On Your Recent Listening"
-              accentIcon={<Radio size={28} className="text-orange-400 mt-1" />}
-              onShowAll={() => toggleExpanded('basedOnRecent')}
-            />
-            <HorizontalScroller>
-              {visibleBasedOnRecent.map((track) => (
-                <button
-                  key={`based-${track.id}`}
-                  type="button"
-                  onClick={() => void playWithSmartQueue(track)}
-                  className="w-48 shrink-0 overflow-hidden rounded-lg bg-dark-card/60 backdrop-blur-sm border border-dark-border/50 text-left transition-all hover:bg-dark-card hover:border-dark-border group"
-                >
-                  <div className="relative overflow-hidden bg-dark-border">
-                    <img 
-                      src={track.imageUrl} 
-                      alt={track.title} 
-                      className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                    />
-                  </div>
-                  <div className="p-4">
-                    <p className="font-bold text-white line-clamp-2">{track.title}</p>
-                    <p className="text-sm text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
-                  </div>
-                </button>
-              ))}
-            </HorizontalScroller>
-          </section>
+          {basedOnRecentListening.length > 0 && (
+            <section className="mb-12 min-w-0 max-w-full">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">Based on your recent listening</h2>
+                {basedOnRecentListening.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded('basedOnRecent')}
+                    className="text-sm font-semibold text-gray-400 transition-colors hover:text-white"
+                  >
+                    Show all
+                  </button>
+                )}
+              </div>
+              <HorizontalScroller>
+                {visibleBasedOnRecent.map((track) => (
+                  <button
+                    key={`based-${track.id}`}
+                    type="button"
+                    onClick={() => void playWithSmartQueue(track)}
+                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
+                  >
+                    <div className="relative overflow-hidden h-40">
+                      <img 
+                        src={track.imageUrl} 
+                        alt={track.title} 
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      />
+                    </div>
+                    <div className="p-3">
+                      <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
+                    </div>
+                  </button>
+                ))}
+              </HorizontalScroller>
+            </section>
+          )}
 
           <section className="mb-12">
-            <SectionHeader
-              title="Today's Biggest Hits"
-              accentIcon={<Disc3 size={28} className="text-pink-400 mt-1" />}
-              onShowAll={() => toggleExpanded('hits')}
-            />
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">Today's biggest hits</h2>
+              {todaysBiggestHits.length > 8 && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded('hits')}
+                  className="text-sm font-semibold text-gray-400 transition-colors hover:text-white"
+                >
+                  Show all
+                </button>
+              )}
+            </div>
             {loading && todaysBiggestHits.length === 0 ? (
               <p className="text-sm text-gray-400">Loading today's biggest hits...</p>
             ) : (
@@ -418,18 +456,18 @@ export const Home: React.FC = () => {
                     key={`hit-${track.id}`}
                     type="button"
                     onClick={() => void playWithSmartQueue(track)}
-                    className="w-48 shrink-0 overflow-hidden rounded-lg bg-dark-card/60 backdrop-blur-sm border border-dark-border/50 text-left transition-all hover:bg-dark-card hover:border-dark-border group"
+                    className="w-40 shrink-0 overflow-hidden rounded-lg bg-dark-card text-left transition-all hover:bg-dark-border group"
                   >
-                    <div className="relative overflow-hidden bg-dark-border">
+                    <div className="relative overflow-hidden h-40">
                       <img 
                         src={track.imageUrl} 
                         alt={track.title} 
-                        className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                       />
                     </div>
-                    <div className="p-4">
-                      <p className="font-bold text-white line-clamp-2">{track.title}</p>
-                      <p className="text-sm text-gray-400 mt-2 line-clamp-1">{track.artist}</p>
+                    <div className="p-3">
+                      <p className="font-bold text-white text-sm line-clamp-2">{track.title}</p>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{track.artist}</p>
                     </div>
                   </button>
                 ))}
@@ -438,6 +476,8 @@ export const Home: React.FC = () => {
           </section>
         </>
       )}
+    </div>
+  );
     </div>
   );
 };
