@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, ListMusic, ChevronLeft, ChevronRight, PanelLeft, Plus } from 'lucide-react';
+import { Heart, ListMusic, ChevronLeft, ChevronRight, PanelLeft, Plus, Music } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useMusic } from '../context/MusicContext';
 
