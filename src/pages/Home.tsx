@@ -100,23 +100,6 @@ export const Home: React.FC = () => {
     });
   }, [likedTracks, recentlyPlayedTracks]);
 
-  const topArtists = useMemo(() => {
-    const counts = new Map<string, { artist: string; imageUrl: string }>();
-    const totals = new Map<string, number>();
-
-    recentScrobbles.forEach((entry) => {
-      counts.set(entry.track.artist, {
-        artist: entry.track.artist,
-        imageUrl: entry.track.imageUrl,
-      });
-      totals.set(entry.track.artist, (totals.get(entry.track.artist) ?? 0) + 1);
-    });
-
-    return [...counts.values()]
-      .sort((left, right) => (totals.get(right.artist) ?? 0) - (totals.get(left.artist) ?? 0))
-      .slice(0, 10);
-  }, [recentScrobbles]);
-
   const moreOfWhatYouLike = useMemo(() => recommendedTracks.slice(0, 10), [recommendedTracks]);
   const basedOnRecentListening = useMemo(
     () => recommendedTracks.slice(10, 20).concat(trendingTracks).slice(0, 10),
