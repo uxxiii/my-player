@@ -127,7 +127,6 @@ export const Home: React.FC = () => {
   const visibleJumpBackIn = expandedSections.jumpBackIn ? jumpBackInTracks : jumpBackInTracks.slice(0, 6);
   const visibleAlbumsYouLike = expandedSections.albums ? albumsYouLike : albumsYouLike.slice(0, 8);
   const visibleRecents = expandedSections.recents ? recentlyPlayedTracks : recentlyPlayedTracks.slice(0, 8);
-  const visibleTopArtists = expandedSections.topArtists ? topArtists : topArtists.slice(0, 5);
   const visibleMoreOfWhatYouLike = expandedSections.moreLike ? moreOfWhatYouLike : moreOfWhatYouLike.slice(0, 8);
   const visibleBasedOnRecent = expandedSections.basedOnRecent ? basedOnRecentListening : basedOnRecentListening.slice(0, 8);
   const visibleHits = expandedSections.hits ? todaysBiggestHits : todaysBiggestHits.slice(0, 8);
@@ -158,37 +157,6 @@ export const Home: React.FC = () => {
           </button>
         ))}
       </div>
-
-      {showPlaylistSections && (
-        <section className="mb-12 min-w-0 max-w-full">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {playlists.length > 0 ? (
-              playlists.map((playlist) => (
-                <Link
-                  key={playlist.id}
-                  to={`/playlist/${playlist.id}`}
-                  className="group flex items-center overflow-hidden rounded-xl bg-dark-card transition-colors hover:bg-dark-border"
-                >
-                  {playlist.imageUrl ? (
-                    <img src={playlist.imageUrl} alt={playlist.name} className="h-16 w-16 object-cover" />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center bg-gradient-to-br from-blue-primary/35 to-cyan-400/20 text-blue-100">
-                      <Disc3 size={24} />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1 px-4">
-                    <p className="truncate font-semibold text-white">{playlist.name}</p>
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-dark-border bg-dark-card/70 px-5 py-10 text-center text-gray-400">
-                Create a playlist to pin your favorite collections here.
-              </div>
-            )}
-          </div>
-        </section>
-      )}
 
   return (
     <div className="main-content min-w-0 max-w-full overflow-x-hidden p-6">
